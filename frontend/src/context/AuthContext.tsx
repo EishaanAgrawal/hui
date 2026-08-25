@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const data = await authApi.login(credentials);
     setToken(data.token);
     setUser(data.user);
+    setLoading(false);
     localStorage.setItem('farmdirect_token', data.token);
     localStorage.setItem('farmdirect_user', JSON.stringify(data.user));
   };
@@ -61,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const res = await authApi.registerConsumer(data);
     setToken(res.token);
     setUser(res.user);
+    setLoading(false);
     localStorage.setItem('farmdirect_token', res.token);
     localStorage.setItem('farmdirect_user', JSON.stringify(res.user));
   };
@@ -69,6 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const res = await authApi.registerFarmer(data);
     setToken(res.token);
     setUser(res.user);
+    setLoading(false);
     localStorage.setItem('farmdirect_token', res.token);
     localStorage.setItem('farmdirect_user', JSON.stringify(res.user));
   };
