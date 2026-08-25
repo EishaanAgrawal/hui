@@ -35,6 +35,26 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Outfit', 'Inter', 'sans-serif'],
+      },
+      boxShadow: {
+        'glow': '0 0 25px -5px rgba(16, 185, 129, 0.35)',
+        'glow-amber': '0 0 25px -5px rgba(245, 158, 11, 0.35)',
+        'float': '0 20px 35px -10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)',
+      },
+      animation: {
+        'bounce-subtle': 'bounceSubtle 2s infinite ease-in-out',
+        'pulse-subtle': 'pulseSubtle 3s infinite ease-in-out',
+      },
+      keyframes: {
+        bounceSubtle: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-4px)' },
+        },
+        pulseSubtle: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.85' },
+        }
       }
     },
   },

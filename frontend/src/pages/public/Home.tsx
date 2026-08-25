@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Sparkles,
   ArrowRight,
-  TrendingUp,
   ShieldCheck,
   Tractor,
+  Sparkles,
+  TrendingDown,
+  Clock,
+  Award,
+  ChevronRight,
   HeartHandshake,
   CheckCircle2,
-  ChevronRight,
-  Star,
+  Flame,
 } from 'lucide-react';
 import { productApi, categoryApi, farmerApi } from '../../services/api';
 import { Product, Category, FarmerProfile } from '../../types';
@@ -17,6 +19,7 @@ import { ProductCard } from '../../components/products/ProductCard';
 import { PriceTransparencyWidget } from '../../components/common/PriceTransparencyWidget';
 import { Button } from '../../components/common/Button';
 import { Loader } from '../../components/common/Loader';
+import { FloatingCartBar } from '../../components/common/FloatingCartBar';
 
 export const Home: React.FC = () => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
@@ -25,333 +28,353 @@ export const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadHomeData = async () => {
       try {
-        const [prodData, catData, farmerData] = await Promise.all([
+        const [prodRes, catRes, farmRes] = await Promise.all([
           productApi.getProducts({ limit: 8, sort: 'newest' }),
           categoryApi.getCategories(),
           farmerApi.getFarmers(),
         ]);
-        setFeaturedProducts(prodData.products);
-        setCategories(catData);
-        setFarmers(farmerData.slice(0, 4));
+        setFeaturedProducts(prodRes.products);
+        setCategories(catRes);
+        setFarmers(farmRes.slice(0, 4));
       } catch (err) {
-        console.error('Failed to load homepage data:', err);
+        console.error('Home page data load error:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    loadHomeData();
   }, []);
 
   if (loading) {
-    return <Loader fullPage message="Harvesting direct farm offerings..." />;
+    return <Loader fullPage message="Harvesting direct farm listings..." />;
   }
 
   return (
-    <div className="space-y-16 sm:space-y-24 pb-20">
-      {/* 1. Hero Section */}
-      <section className="relative overflow-hidden bg-slate-950 text-white pt-12 sm:pt-20 pb-20 sm:pb-32 px-4 sm:px-6 lg:px-8 -mt-20">
-        <div className="absolute inset-0 z-0 opacity-40">
-          <img
-            src="https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=1800"
-            alt="Farm Sunrise"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent" />
-        </div>
+    <div className="space-y-16 pb-12">
+      {/* Floating Bottom Cart Bar (Blinkit style) */}
+      <FloatingCartBar />
 
-        <div className="relative z-10 max-w-7xl mx-auto pt-20">
-          <div className="max-w-3xl space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/20 border border-brand-500/30 text-brand-300 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-              <Sparkles className="w-4 h-4 text-brand-400" />
-              <span>Direct From Certified Soil To Your Doorstep</span>
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-slate-950 text-white pt-10 pb-20 sm:py-24">
+        {/* Background glow ambient circles */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-brand-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/4 w-80 h-80 rounded-full bg-emerald-600/15 blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            {/* Left Copy */}
+            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-900/60 border border-brand-500/30 text-brand-300 text-xs font-bold shadow-glow">
+                <span className="w-2 h-2 rounded-full bg-brand-400 animate-ping" />
+                <span>Zero Middlemen • 100% Direct to Grower</span>
+              </div>
+
+              <h1 className="font-display text-4xl sm:text-6xl lg:text-6xl font-black tracking-tight text-white leading-tight">
+                Farm-Fresh Produce,{' '}
+                <span className="bg-gradient-to-r from-brand-300 via-emerald-400 to-teal-300 bg-clip-text text-transparent">
+                  Harvested Today.
+                </span>
+              </h1>
+
+              <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 font-normal leading-relaxed">
+                Connect directly with verified Indian growers. No cold-storage ripening, no 5-tier intermediary markups — just pure, nutritious harvest delivered to your doorstep within 24 hours.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
+                <Link to="/shop" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="primary"
+                    className="w-full font-black text-sm shadow-xl shadow-brand-500/30 ring-2 ring-brand-400/40"
+                    icon={<ArrowRight className="w-4 h-4" />}
+                  >
+                    Shop Sunrise Harvests
+                  </Button>
+                </Link>
+                <Link to="/how-it-works" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full text-white border-slate-700 hover:bg-slate-900 font-bold text-sm"
+                  >
+                    Compare Mandi Prices
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Trust Value Badges */}
+              <div className="pt-6 grid grid-cols-3 gap-4 border-t border-slate-800 text-center lg:text-left">
+                <div>
+                  <p className="text-2xl sm:text-3xl font-black text-brand-400 font-display">85-90%</p>
+                  <p className="text-xs text-slate-400 font-medium mt-0.5">Farmer Earning Share</p>
+                </div>
+                <div>
+                  <p className="text-2xl sm:text-3xl font-black text-emerald-400 font-display">&lt; 24h</p>
+                  <p className="text-xs text-slate-400 font-medium mt-0.5">Harvest-to-Door Delivery</p>
+                </div>
+                <div>
+                  <p className="text-2xl sm:text-3xl font-black text-amber-400 font-display">100%</p>
+                  <p className="text-xs text-slate-400 font-medium mt-0.5">Price Transparency</p>
+                </div>
+              </div>
             </div>
 
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1]">
-              Fresh harvest. <br />
-              <span className="bg-gradient-to-r from-brand-400 via-emerald-300 to-amber-300 bg-clip-text text-transparent">
-                Zero Middlemen.
-              </span>
-            </h1>
+            {/* Right Interactive Visual Card */}
+            <div className="lg:col-span-5 relative">
+              <div className="relative mx-auto max-w-md bg-slate-900/90 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl backdrop-blur-md space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🌱</span>
+                    <div>
+                      <h4 className="text-sm font-black text-white">Live Morning Harvest</h4>
+                      <p className="text-[11px] text-brand-400 font-bold">Dispatched from Nashik Valley</p>
+                    </div>
+                  </div>
+                  <span className="bg-emerald-500/20 text-emerald-300 font-black text-[10px] px-2.5 py-1 rounded-full">
+                    Active Batch
+                  </span>
+                </div>
 
-            <p className="text-base sm:text-xl text-slate-300 leading-relaxed font-normal max-w-2xl">
-              Connect directly with verified local growers. Farmers receive up to{' '}
-              <strong className="text-white font-bold">90% of your payment</strong>, while you get
-              pesticide-free seasonal produce picked at sunrise.
-            </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 border border-slate-700/60">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src="https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=150"
+                        alt="Heirloom Tomatoes"
+                        className="w-12 h-12 rounded-xl object-cover"
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-white">Organic Vine Tomatoes</p>
+                        <p className="text-[11px] text-slate-400">Green Valley Organics</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black text-brand-400">₹38/KG</span>
+                      <span className="block text-[10px] text-slate-400 line-through">₹65 Mandi</span>
+                    </div>
+                  </div>
 
-            <div className="flex flex-wrap items-center gap-4 pt-4">
-              <Link to="/shop">
-                <Button size="lg" variant="primary" icon={<ArrowRight className="w-5 h-5" />}>
-                  Explore Today’s Harvest
-                </Button>
-              </Link>
-              <Link to="/farmers">
-                <Button size="lg" variant="outline" className="bg-slate-900/80 text-white border-slate-700 hover:bg-slate-800">
-                  <Tractor className="w-5 h-5 text-brand-400" /> Meet The Farmers
-                </Button>
-              </Link>
-            </div>
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 border border-slate-700/60">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src="https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&q=80&w=150"
+                        alt="Alphonso Mango"
+                        className="w-12 h-12 rounded-xl object-cover"
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-white">GI Ratnagiri Alphonso</p>
+                        <p className="text-[11px] text-slate-400">Kokana Heritage Orchard</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black text-brand-400">₹650/Doz</span>
+                      <span className="block text-[10px] text-slate-400 line-through">₹950 Retail</span>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Quick trust metrics */}
-            <div className="pt-8 grid grid-cols-3 gap-4 border-t border-slate-800/80 max-w-lg">
-              <div>
-                <div className="text-2xl sm:text-3xl font-black text-brand-400">100%</div>
-                <div className="text-xs text-slate-400 font-medium">Price Transparent</div>
-              </div>
-              <div>
-                <div className="text-2xl sm:text-3xl font-black text-emerald-400">&lt; 24h</div>
-                <div className="text-xs text-slate-400 font-medium">Harvest to Door</div>
-              </div>
-              <div>
-                <div className="text-2xl sm:text-3xl font-black text-amber-400">90%</div>
-                <div className="text-xs text-slate-400 font-medium">Direct Farmer Share</div>
+                <div className="p-4 rounded-2xl bg-brand-950/70 border border-brand-800/60 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between text-brand-300 font-bold">
+                    <span>🌾 Farmer Earning</span>
+                    <span className="text-white font-black text-sm">88.5% of total</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-brand-500 to-emerald-400 rounded-full w-[88.5%]" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. Interactive Price Transparency Calculator */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 sm:-mt-24 relative z-20">
-        <PriceTransparencyWidget
-          productName="GI-Tagged Ratnagiri Alphonso Mangoes"
-          farmPrice={650}
-          unit="DOZEN"
-        />
-      </section>
-
-      {/* 3. Browse Categories Grid */}
+      {/* Category Icons Carousel Strip (Blinkit Style) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-end justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full">
-              Farm Categories
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
-              Browse Pure Agro Produce
+            <h2 className="font-display text-2xl sm:text-3xl font-black text-slate-900">
+              Explore Farm Harvest Categories
             </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Directly sourced from certified growers across regions.
+            </p>
           </div>
           <Link
             to="/shop"
-            className="text-xs sm:text-sm font-bold text-brand-700 hover:text-brand-800 flex items-center gap-1"
+            className="text-xs font-bold text-brand-700 hover:text-brand-800 flex items-center gap-1"
           >
-            All Produce <ChevronRight className="w-4 h-4" />
+            All Categories <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
           {categories.map((cat) => (
             <Link
               key={cat.id}
               to={`/shop?category=${cat.slug}`}
-              className="group bg-white rounded-2xl border border-slate-200/80 p-3.5 text-center hover:border-brand-500 hover:shadow-lg transition-all duration-300 flex flex-col items-center justify-between"
+              className="group bg-white rounded-3xl p-3 sm:p-4 border border-slate-200/90 shadow-sm hover:shadow-lg hover:border-brand-500 transition duration-300 text-center flex flex-col items-center justify-center space-y-2 hover:-translate-y-1"
             >
-              <div className="w-14 h-14 rounded-2xl overflow-hidden mb-3 bg-slate-100 group-hover:scale-110 transition duration-300">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-slate-100 p-1">
                 <img
-                  src={cat.image || 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=200'}
+                  src={
+                    cat.image ||
+                    'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=200'
+                  }
                   alt={cat.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-xl group-hover:scale-110 transition duration-300"
                 />
               </div>
-              <h3 className="text-xs font-bold text-slate-800 group-hover:text-brand-700 transition">
+              <span className="font-display font-bold text-xs text-slate-800 group-hover:text-brand-700 transition line-clamp-1">
                 {cat.name}
-              </h3>
-              <span className="text-[10px] text-slate-400 mt-0.5 font-medium">
-                {cat.productCount || 0} items
               </span>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* 4. Featured Fresh Harvests */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">
-              Direct From Soil
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
-              Today’s Fresh Farm Harvests
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Harvested upon your order placement for peak crispness and nutrient integrity.
-            </p>
+      {/* Today's Fresh Harvest Deals Grid (Blinkit style with interactive ADD buttons) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-50 text-amber-600 font-bold">
+              <Flame className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-display text-2xl sm:text-3xl font-black text-slate-900">
+                Fresh Sunrise Harvests
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                Picked this morning from local orchards & fields.
+              </p>
+            </div>
           </div>
+
           <Link
             to="/shop"
-            className="hidden sm:flex text-sm font-bold text-brand-700 hover:text-brand-800 items-center gap-1"
+            className="hidden sm:inline-flex items-center gap-1 text-xs font-black text-brand-700 hover:text-brand-800"
           >
-            View Marketplace <ChevronRight className="w-4 h-4" />
+            Browse All {featuredProducts.length}+ Produce <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {featuredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
+      </section>
 
-        <div className="mt-8 text-center sm:hidden">
-          <Link to="/shop">
-            <Button variant="outline" className="w-full">
-              View All Products
-            </Button>
+      {/* Middlemen Elimination Live Calculator */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <PriceTransparencyWidget />
+      </section>
+
+      {/* Verified Farmers Spotlight */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-display text-2xl sm:text-3xl font-black text-slate-900">
+              Meet Our Verified Producers
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              100% Traceable. Know the exact family and farm growing your food.
+            </p>
+          </div>
+
+          <Link
+            to="/farmers"
+            className="text-xs font-black text-brand-700 hover:text-brand-800 flex items-center gap-1"
+          >
+            View All Farmers <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
-      </section>
 
-      {/* 5. Verified Farmers Showcase */}
-      <section className="bg-slate-900 text-white py-16 sm:py-24 px-4 sm:px-6 lg:px-8 rounded-3xl max-w-7xl mx-auto overflow-hidden relative">
-        <div className="relative z-10">
-          <div className="flex flex-wrap items-end justify-between gap-4 mb-10 pb-6 border-b border-slate-800">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-950 px-3 py-1 rounded-full border border-brand-800">
-                Verified Producers
-              </span>
-              <h2 className="text-2xl sm:text-4xl font-black text-white mt-2">
-                Meet The Stewards of Clean Agriculture
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                Every farm on FarmDirect undergoes strict soil health and zero-adulteration verification.
-              </p>
-            </div>
-            <Link to="/farmers">
-              <Button variant="primary" size="sm" icon={<Tractor className="w-4 h-4" />}>
-                View All Verified Farms
-              </Button>
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {farmers.map((farmer) => (
-              <Link
-                key={farmer.id}
-                to={`/farmers/${farmer.id}`}
-                className="group bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-brand-500 rounded-3xl p-5 transition duration-300 flex flex-col justify-between"
-              >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {farmers.map((farmer) => (
+            <Link
+              key={farmer.id}
+              to={`/farmers/${farmer.id}`}
+              className="group bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-xl transition duration-300 flex flex-col justify-between space-y-4 hover:-translate-y-1"
+            >
+              <div className="flex items-center gap-4">
+                <img
+                  src={
+                    farmer.avatar ||
+                    farmer.user?.avatar ||
+                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150'
+                  }
+                  alt={farmer.farmName}
+                  className="w-14 h-14 rounded-2xl object-cover ring-2 ring-brand-500 shadow-sm"
+                />
                 <div>
-                  <div className="flex items-center gap-3.5 mb-4">
-                    <img
-                      src={
-                        farmer.avatar ||
-                        farmer.user?.avatar ||
-                        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150'
-                      }
-                      alt={farmer.farmName}
-                      className="w-12 h-12 rounded-2xl object-cover ring-2 ring-brand-500"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-bold text-white text-base group-hover:text-brand-400 transition truncate">
-                        {farmer.farmName}
-                      </h3>
-                      <p className="text-xs text-slate-400 truncate">{farmer.location}</p>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed mb-4">
-                    {farmer.description}
-                  </p>
-                </div>
-
-                <div className="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs">
-                  <span className="text-brand-300 font-semibold">{farmer.farmingType}</span>
-                  <span className="flex items-center gap-1 font-bold text-amber-400">
-                    <Star className="w-3.5 h-3.5 fill-amber-400" />
-                    {farmer.avgRating || 4.9}
+                  <h3 className="font-display font-bold text-slate-900 text-sm group-hover:text-brand-700 transition">
+                    {farmer.farmName}
+                  </h3>
+                  <p className="text-xs text-slate-500">{farmer.location}</p>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full mt-1">
+                    <ShieldCheck className="w-3 h-3" /> Verified Farm
                   </span>
                 </div>
-              </Link>
-            ))}
-          </div>
+              </div>
+
+              <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                {farmer.description || 'Specializing in natural, pesticide-free cultivation practices.'}
+              </p>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500">
+                <span className="text-brand-800">{farmer.farmingType || 'Organic'}</span>
+                <span className="text-brand-700 group-hover:underline">Visit Farm →</span>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
-      {/* 6. How It Works Workflow */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full">
-            Transparent Logistics
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
-            How Direct Farm Dispatch Works
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            We replaced warehouse stockpiling with demand-driven sunrise harvesting.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm text-center">
-            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-700 font-black text-lg flex items-center justify-center mx-auto mb-4">
-              1
-            </div>
-            <h3 className="font-bold text-slate-900 mb-1">Select Farm & Produce</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Browse products listed directly by verified growers with transparent price breakdown.
-            </p>
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm text-center">
-            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-700 font-black text-lg flex items-center justify-center mx-auto mb-4">
-              2
-            </div>
-            <h3 className="font-bold text-slate-900 mb-1">Dawn Harvest</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Farmer receives notification and harvests your exact order quantity at sunrise.
-            </p>
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm text-center">
-            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-700 font-black text-lg flex items-center justify-center mx-auto mb-4">
-              3
-            </div>
-            <h3 className="font-bold text-slate-900 mb-1">Coldless Transit</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Express dispatch directly from farm gate to your city cluster without days of storage.
-            </p>
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm text-center">
-            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-700 font-black text-lg flex items-center justify-center mx-auto mb-4">
-              4
-            </div>
-            <h3 className="font-bold text-slate-900 mb-1">Direct Settlement</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Farmer receives 85-90% net sales deposited directly to their bank account.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. Call To Action Banner */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="organic-gradient text-white rounded-3xl p-8 sm:p-14 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="max-w-xl space-y-4 text-center md:text-left">
-            <span className="bg-white/20 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full backdrop-blur-sm">
-              Are You An Agricultural Producer?
+      {/* 3 Steps Pipeline (Amazon Fresh / Blinkit style) */}
+      <section className="bg-slate-900 text-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-950 px-3 py-1 rounded-full border border-brand-800">
+              FarmDirect Quality Standard
             </span>
-            <h2 className="text-3xl sm:text-4xl font-black leading-tight">
-              Sell Directly To Thousands of Consumers & Cafes
+            <h2 className="font-display text-3xl sm:text-4xl font-black text-white">
+              From Soil to Table in 3 Simple Steps
             </h2>
-            <p className="text-brand-100 text-sm leading-relaxed">
-              Eliminate mandi commissions, control your own produce pricing, and enjoy timely guaranteed payouts.
-            </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-            <Link to="/register/farmer">
-              <Button size="lg" className="bg-white text-brand-900 hover:bg-brand-50 shadow-xl font-black">
-                🚜 Register Your Farm
-              </Button>
-            </Link>
-            <Link to="/how-it-works">
-              <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10">
-                Learn Benefits
-              </Button>
-            </Link>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-slate-800/60 rounded-3xl p-8 border border-slate-700/60 space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-brand-600/30 text-brand-400 flex items-center justify-center text-xl font-bold font-display">
+                1
+              </div>
+              <h3 className="font-display text-lg font-bold text-white">You Order from Named Farms</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Choose heirloom tomatoes, mangoes, or cold-pressed oils from verified growers with full price transparency.
+              </p>
+            </div>
+
+            <div className="bg-slate-800/60 rounded-3xl p-8 border border-slate-700/60 space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-brand-600/30 text-brand-400 flex items-center justify-center text-xl font-bold font-display">
+                2
+              </div>
+              <h3 className="font-display text-lg font-bold text-white">Harvested at Morning Sunrise</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Produce is never held in chemical storage for weeks. Farmers harvest specifically to fulfill your basket.
+              </p>
+            </div>
+
+            <div className="bg-slate-800/60 rounded-3xl p-8 border border-slate-700/60 space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-brand-600/30 text-brand-400 flex items-center justify-center text-xl font-bold font-display">
+                3
+              </div>
+              <h3 className="font-display text-lg font-bold text-white">Direct 24-Hour Delivery</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Express farm logistics brings nutrient-dense food to your doorstep while 85–90% goes directly to the grower.
+              </p>
+            </div>
           </div>
         </div>
       </section>
