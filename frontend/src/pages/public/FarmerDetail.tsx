@@ -29,6 +29,7 @@ export const FarmerDetail: React.FC = () => {
         setFarmer(data);
       } catch (err) {
         console.error('Failed to load farmer:', err);
+        setFarmer(null);
       } finally {
         setLoading(false);
       }

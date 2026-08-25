@@ -165,7 +165,7 @@ export const Navbar: React.FC = () => {
                     className="w-8 h-8 rounded-xl object-cover ring-2 ring-brand-500"
                   />
                   <span className="hidden sm:inline font-bold text-xs max-w-[90px] truncate">
-                    {user?.name.split(' ')[0]}
+                    {user?.name ? user.name.split(' ')[0] : 'Account'}
                   </span>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                 </button>

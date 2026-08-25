@@ -50,9 +50,11 @@ export const Cart: React.FC = () => {
     );
   }
 
+  const groupedList = cart?.groupedByFarmer || [];
+
   const progressToFreeDelivery = Math.min(
     100,
-    Math.round((cart.subtotal / cart.freeDeliveryThreshold) * 100)
+    Math.round(((cart?.subtotal || 0) / (cart?.freeDeliveryThreshold || 500)) * 100)
   );
 
   return (
@@ -61,7 +63,7 @@ export const Cart: React.FC = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900">Your Fresh Harvest Cart</h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Items from {cart.groupedByFarmer.length} verified farm partner{cart.groupedByFarmer.length > 1 ? 's' : ''}
+            Items from {groupedList.length} verified farm partner{groupedList.length > 1 ? 's' : ''}
           </p>
         </div>
 
@@ -77,9 +79,9 @@ export const Cart: React.FC = () => {
       <div className="bg-brand-50 border border-brand-200 rounded-2xl p-4">
         <div className="flex items-center justify-between text-xs font-bold text-brand-900 mb-2">
           <span>
-            {cart.subtotal >= cart.freeDeliveryThreshold
+            {(cart?.subtotal || 0) >= (cart?.freeDeliveryThreshold || 500)
               ? '🎉 You unlocked Free Express Delivery!'
-              : `Add ₹${cart.freeDeliveryThreshold - cart.subtotal} more to get Free Delivery!`}
+              : `Add ₹${(cart?.freeDeliveryThreshold || 500) - (cart?.subtotal || 0)} more to get Free Delivery!`}
           </span>
           <span>{progressToFreeDelivery}%</span>
         </div>
@@ -94,7 +96,7 @@ export const Cart: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Left List Grouped by Farmer */}
         <div className="lg:col-span-2 space-y-6">
-          {cart.groupedByFarmer.map((group) => (
+          {groupedList.map((group) => (
             <div
               key={group.farmerId}
               className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden"

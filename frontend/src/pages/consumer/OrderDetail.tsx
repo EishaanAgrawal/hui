@@ -146,11 +146,11 @@ export const OrderDetail: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <h3 className="text-lg font-bold text-slate-900 pb-3 border-b border-slate-100">
-              Harvest Produce ({order.items.length} items)
+              Harvest Produce ({order.items?.length || 0} items)
             </h3>
 
             <div className="divide-y divide-slate-100">
-              {order.items.map((item) => (
+              {(order.items || []).map((item) => (
                 <div
                   key={item.id}
                   className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4"

@@ -16,9 +16,10 @@ export const FarmersList: React.FC = () => {
       setLoading(true);
       try {
         const data = await farmerApi.getFarmers({ search });
-        setFarmers(data);
+        setFarmers(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Failed to load farmers:', err);
+        setFarmers([]);
       } finally {
         setLoading(false);
       }

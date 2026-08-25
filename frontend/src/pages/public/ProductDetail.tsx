@@ -51,9 +51,10 @@ export const ProductDetail: React.FC = () => {
       try {
         const data = await productApi.getProductById(id);
         setProduct(data);
-        setQuantity(data.minimumOrderQuantity || 1);
+        setQuantity(data?.minimumOrderQuantity || 1);
       } catch (err) {
         console.error('Failed to load product:', err);
+        setProduct(null);
       } finally {
         setLoading(false);
       }

@@ -17,9 +17,10 @@ export const AdminUsers: React.FC = () => {
   const fetchUsers = async () => {
     try {
       const data = await adminApi.getUsers({ role: roleFilter, search });
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setUsers([]);
     } finally {
       setLoading(false);
     }

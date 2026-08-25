@@ -21,13 +21,13 @@ export const FloatingCartBar: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-black text-white text-base">₹{cart.total}</span>
+              <span className="font-black text-white text-base">₹{cart?.total || 0}</span>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded-md">
                 Direct Farm Rate
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              {cart.items.length} item{cart.items.length > 1 ? 's' : ''} in your fresh basket
+              {cart?.items?.length || itemCount} item{(cart?.items?.length || itemCount) > 1 ? 's' : ''} in your fresh basket
             </p>
           </div>
         </div>

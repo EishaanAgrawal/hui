@@ -128,8 +128,8 @@ export const AdminDashboard: React.FC = () => {
               <p className="text-xs text-slate-500">Daily gross transaction volume</p>
             </div>
 
-            <div className="h-64 sm:h-72 w-full pt-4">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-64 sm:h-72 w-full pt-4 min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={salesTimeline}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} />
@@ -157,8 +157,8 @@ export const AdminDashboard: React.FC = () => {
               <p className="text-xs text-slate-500">Active listed items by agricultural category</p>
             </div>
 
-            <div className="h-56 w-full flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-56 w-full flex items-center justify-center min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie
                     data={categoryDistribution}

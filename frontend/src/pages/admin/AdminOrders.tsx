@@ -14,8 +14,11 @@ export const AdminOrders: React.FC = () => {
   useEffect(() => {
     orderApi
       .getOrders()
-      .then(setOrders)
-      .catch(console.error)
+      .then((res) => setOrders(Array.isArray(res) ? res : []))
+      .catch((err) => {
+        console.error(err);
+        setOrders([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 

@@ -41,6 +41,8 @@ import { AdminOrders } from '../pages/admin/AdminOrders';
 import { AdminCategories } from '../pages/admin/AdminCategories';
 import { MobileBottomNav } from '../components/layout/MobileBottomNav';
 
+import { Loader } from '../components/common/Loader';
+
 // Protected Route Component
 const ProtectedRoute: React.FC<{
   children: React.ReactNode;
@@ -48,7 +50,10 @@ const ProtectedRoute: React.FC<{
 }> = ({ children, allowedRoles }) => {
   const { user, isAuthenticated, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) {
+    return <Loader fullPage message="Verifying secure farm access..." />;
+  }
+  
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
   }

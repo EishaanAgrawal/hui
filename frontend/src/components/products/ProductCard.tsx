@@ -22,8 +22,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
 
   // Find if this item is in the cart
-  const cartItem = cart?.items.find((item) => item.productId === product.id);
+  const cartItem = cart?.items?.find((item) => item?.productId === product?.id);
   const inCartQty = cartItem ? cartItem.quantity : 0;
+
+  if (!product) return null;
 
   const estimatedMarketPrice =
     product.estimatedMarketPrice || Math.round(product.price * 1.45);

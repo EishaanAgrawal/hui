@@ -37,10 +37,12 @@ export const Shop: React.FC = () => {
           page: pageParam,
           limit: 12,
         });
-        setProducts(data.products);
-        setPagination(data.pagination);
+        setProducts(data?.products || []);
+        setPagination(data?.pagination || { total: 0, page: 1, totalPages: 1 });
       } catch (err) {
         console.error('Failed to load products:', err);
+        setProducts([]);
+        setPagination({ total: 0, page: 1, totalPages: 1 });
       } finally {
         setLoading(false);
       }

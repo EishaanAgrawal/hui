@@ -107,7 +107,7 @@ export const registerFarmer = async (req: Request, res: Response): Promise<any> 
             description: description || `Welcome to ${farmName}, offering fresh and natural agricultural produce.`,
             farmSize: farmSize || '10 Acres',
             farmingType: farmingType || 'Organic & Natural',
-            experienceYears: experienceYears ? parseInt(experienceYears) : 5,
+            experienceYears: experienceYears ? (parseInt(String(experienceYears)) || 5) : 5,
             verificationStatus: 'VERIFIED', // Default verified for smooth demo experience
           },
         },

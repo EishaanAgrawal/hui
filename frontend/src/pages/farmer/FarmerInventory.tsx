@@ -15,14 +15,17 @@ export const FarmerInventory: React.FC = () => {
   const fetchProducts = async () => {
     try {
       const res = await farmerApi.getMyProducts();
-      setProducts(res);
+      const validProds = Array.isArray(res) ? res : [];
+      setProducts(validProds);
       const map: Record<string, number> = {};
-      res.forEach((p) => {
+      validProds.forEach((p) => {
         map[p.id] = p.availableQuantity;
       });
       setStockUpdates(map);
     } catch (err) {
       console.error(err);
+      setProducts([]);
+      setStockUpdates({});
     } finally {
       setLoading(false);
     }

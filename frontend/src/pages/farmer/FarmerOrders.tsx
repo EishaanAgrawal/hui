@@ -15,9 +15,10 @@ export const FarmerOrders: React.FC = () => {
   const fetchOrders = async () => {
     try {
       const data = await orderApi.getOrders();
-      setOrders(data);
+      setOrders(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -99,7 +100,7 @@ export const FarmerOrders: React.FC = () => {
                 {/* Items & Controls */}
                 <div className="p-6 space-y-6">
                   <div className="divide-y divide-slate-100">
-                    {order.items.map((item) => (
+                    {(order.items || []).map((item) => (
                       <div key={item.id} className="py-3 first:pt-0 last:pb-0 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-3">
                           <img

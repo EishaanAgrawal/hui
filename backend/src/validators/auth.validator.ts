@@ -14,13 +14,13 @@ export const registerFarmerSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     email: z.string().email('Invalid email address'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
-    phone: z.string().min(10, 'Valid phone number is required'),
+    phone: z.string().optional(),
     farmName: z.string().min(2, 'Farm name is required'),
     location: z.string().min(2, 'Location is required'),
     description: z.string().optional(),
     farmSize: z.string().optional(),
     farmingType: z.string().optional(),
-    experienceYears: z.number().optional().default(5),
+    experienceYears: z.coerce.number().optional().default(5),
   }),
 });
 

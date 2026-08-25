@@ -12,8 +12,11 @@ export const Wishlist: React.FC = () => {
   useEffect(() => {
     userApi
       .getWishlist()
-      .then(setItems)
-      .catch(console.error)
+      .then((res) => setItems(Array.isArray(res) ? res : []))
+      .catch((err) => {
+        console.error(err);
+        setItems([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 

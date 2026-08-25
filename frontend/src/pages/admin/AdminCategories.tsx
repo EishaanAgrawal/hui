@@ -18,9 +18,10 @@ export const AdminCategories: React.FC = () => {
   const fetchCategories = async () => {
     try {
       const data = await categoryApi.getCategories();
-      setCategories(data);
+      setCategories(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setCategories([]);
     } finally {
       setLoading(false);
     }

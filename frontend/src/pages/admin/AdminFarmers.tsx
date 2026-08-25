@@ -15,9 +15,10 @@ export const AdminFarmers: React.FC = () => {
   const fetchFarmers = async () => {
     try {
       const data = await adminApi.getFarmers();
-      setFarmers(data);
+      setFarmers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setFarmers([]);
     } finally {
       setLoading(false);
     }

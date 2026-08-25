@@ -26,9 +26,10 @@ export const Addresses: React.FC = () => {
   const fetchAddresses = async () => {
     try {
       const data = await userApi.getAddresses();
-      setAddresses(data);
+      setAddresses(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setAddresses([]);
     } finally {
       setLoading(false);
     }

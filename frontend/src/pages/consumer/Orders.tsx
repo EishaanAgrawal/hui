@@ -15,9 +15,10 @@ export const Orders: React.FC = () => {
     const fetchOrders = async () => {
       try {
         const data = await orderApi.getOrders();
-        setOrders(data);
+        setOrders(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Failed to load orders:', err);
+        setOrders([]);
       } finally {
         setLoading(false);
       }
@@ -98,7 +99,7 @@ export const Orders: React.FC = () => {
 
             {/* Items snippet */}
             <div className="p-5 sm:p-6 divide-y divide-slate-100">
-              {order.items.map((item) => (
+              {(order.items || []).map((item) => (
                 <div key={item.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                   <div className="flex items-center gap-3">
                     <img

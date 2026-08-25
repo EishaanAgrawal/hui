@@ -37,13 +37,17 @@ export const FarmerProducts: React.FC = () => {
         farmerApi.getMyProducts(),
         categoryApi.getCategories(),
       ]);
-      setProducts(prods);
-      setCategories(catRes);
-      if (catRes.length > 0 && !form.categoryId) {
-        setForm((prev) => ({ ...prev, categoryId: catRes[0].id }));
+      const validProds = Array.isArray(prods) ? prods : [];
+      const validCats = Array.isArray(catRes) ? catRes : [];
+      setProducts(validProds);
+      setCategories(validCats);
+      if (validCats.length > 0 && !form.categoryId) {
+        setForm((prev) => ({ ...prev, categoryId: validCats[0].id }));
       }
     } catch (err) {
       console.error(err);
+      setProducts([]);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
