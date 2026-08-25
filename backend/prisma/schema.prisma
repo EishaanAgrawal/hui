@@ -1,8 +1,8 @@
-// Use "sqlite" for local offline dev.db OR "postgresql" when connecting to Supabase:
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 
 
 

@@ -39,6 +39,7 @@ import { AdminFarmers } from '../pages/admin/AdminFarmers';
 import { AdminUsers } from '../pages/admin/AdminUsers';
 import { AdminOrders } from '../pages/admin/AdminOrders';
 import { AdminCategories } from '../pages/admin/AdminCategories';
+import { MobileBottomNav } from '../components/layout/MobileBottomNav';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{
@@ -62,13 +63,15 @@ const ProtectedRoute: React.FC<{
 // Main Layout Wrapper for Public & Consumer Pages
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="min-h-screen flex flex-col justify-between">
+    <div className="min-h-screen flex flex-col justify-between pb-16 md:pb-0">
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
+      <MobileBottomNav />
     </div>
   );
 };
+
 
 export const AppRouter: React.FC = () => {
   return (

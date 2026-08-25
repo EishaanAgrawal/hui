@@ -3,20 +3,23 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
-    @apply bg-[#f8fafc] text-slate-900 font-sans;
+    @apply bg-[#f8fafc] text-slate-900 font-sans antialiased overflow-x-hidden;
   }
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
 .glass-nav {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(226, 232, 240, 0.8);
@@ -30,10 +33,20 @@
   background: linear-gradient(135deg, #1c1917 0%, #292524 50%, #44403c 100%);
 }
 
+/* Safe Area Inset Support for Modern Phones */
+.safe-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+/* Smooth Touch Scrolling */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: #f1f5f9;
@@ -44,4 +57,17 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+@keyframes slideLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-left {
+  animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
