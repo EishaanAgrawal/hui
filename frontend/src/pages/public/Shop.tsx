@@ -22,7 +22,13 @@ export const Shop: React.FC = () => {
   const pageParam = parseInt(searchParams.get('page') || '1', 10);
 
   useEffect(() => {
-    categoryApi.getCategories().then(setCategories).catch(console.error);
+    categoryApi
+      .getCategories()
+      .then((res) => setCategories(Array.isArray(res) ? res : []))
+      .catch((err) => {
+        console.error('Failed to load categories:', err);
+        setCategories([]);
+      });
   }, []);
 
   useEffect(() => {
@@ -37,8 +43,10 @@ export const Shop: React.FC = () => {
           page: pageParam,
           limit: 12,
         });
-        setProducts(data?.products || []);
-        setPagination(data?.pagination || { total: 0, page: 1, totalPages: 1 });
+        setProducts(Array.isArray(data?.products) ? data.products : []);
+        setPagination(
+          data?.pagination || { total: 0, page: 1, totalPages: 1 }
+        );
       } catch (err) {
         console.error('Failed to load products:', err);
         setProducts([]);
@@ -119,20 +127,23 @@ export const Shop: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                {(Array.isArray(products) ? products : []).map((product) => (
+                  <ProductCard key={product?.id || Math.random()} product={product} />
                 ))}
               </div>
 
               {/* Pagination */}
-              {pagination.totalPages > 1 && (
+              {Number(pagination?.totalPages) > 1 && (
                 <div className="flex items-center justify-center gap-2 pt-8 border-t border-slate-100">
-                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((pg) => (
+                  {Array.from(
+                    { length: Math.min(50, Math.max(1, Number(pagination.totalPages) || 1)) },
+                    (_, i) => i + 1
+                  ).map((pg) => (
                     <button
                       key={pg}
                       onClick={() => updateParam('page', pg.toString())}
                       className={`w-10 h-10 rounded-xl text-sm font-bold transition ${
-                        pg === pagination.page
+                        pg === (pagination?.page || 1)
                           ? 'bg-brand-600 text-white shadow-md'
                           : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                       }`}

@@ -90,9 +90,9 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
           >
             <span>All Categories</span>
           </button>
-          {categories.map((cat) => (
+          {(Array.isArray(categories) ? categories : []).map((cat) => (
             <button
-              key={cat.id}
+              key={cat.id || cat.slug}
               onClick={() => onSelectCategory(cat.slug)}
               className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition flex items-center justify-between ${
                 selectedCategory === cat.slug

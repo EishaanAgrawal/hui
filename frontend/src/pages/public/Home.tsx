@@ -35,11 +35,14 @@ export const Home: React.FC = () => {
           categoryApi.getCategories(),
           farmerApi.getFarmers(),
         ]);
-        setFeaturedProducts(prodRes.products);
-        setCategories(catRes);
-        setFarmers(farmRes.slice(0, 4));
+        setFeaturedProducts(Array.isArray(prodRes?.products) ? prodRes.products : []);
+        setCategories(Array.isArray(catRes) ? catRes : []);
+        setFarmers(Array.isArray(farmRes) ? farmRes.slice(0, 4) : []);
       } catch (err) {
         console.error('Home page data load error:', err);
+        setFeaturedProducts([]);
+        setCategories([]);
+        setFarmers([]);
       } finally {
         setLoading(false);
       }

@@ -20,33 +20,39 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { cart, addToCart, updateQuantity } = useCart();
 
+  if (!product) return null;
 
   // Find if this item is in the cart
   const cartItem = cart?.items?.find((item) => item?.productId === product?.id);
   const inCartQty = cartItem ? cartItem.quantity : 0;
 
-  if (!product) return null;
-
+  const price = typeof product.price === 'number' ? product.price : (Number(product.price) || 0);
   const estimatedMarketPrice =
-    product.estimatedMarketPrice || Math.round(product.price * 1.45);
-  const savings = Math.max(0, estimatedMarketPrice - product.price);
-  const savingsPercent = Math.round((savings / estimatedMarketPrice) * 100);
+    typeof product.estimatedMarketPrice === 'number'
+      ? product.estimatedMarketPrice
+      : Math.round(price * 1.45);
+  const savings = Math.max(0, estimatedMarketPrice - price);
+  const savingsPercent = estimatedMarketPrice > 0 ? Math.round((savings / estimatedMarketPrice) * 100) : 0;
 
-  const isLowStock = product.availableQuantity <= 15 && product.availableQuantity > 0;
-  const isOutOfStock = product.availableQuantity === 0;
+  const availableQty = typeof product.availableQuantity === 'number' ? product.availableQuantity : (Number(product.availableQuantity) || 0);
+  const isLowStock = availableQty <= 15 && availableQty > 0;
+  const isOutOfStock = availableQty === 0;
+
+  const farmerId = product.farmer && typeof product.farmer === 'object' ? product.farmer.id : (product.farmerId || '');
+  const farmName = product.farmer && typeof product.farmer === 'object' ? (product.farmer.farmName || 'Verified Farm') : 'Verified Farm';
 
   return (
     <div className="group bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden relative hover:-translate-y-1">
       {/* Badges on Top of Image */}
       <div className="relative aspect-square w-full overflow-hidden bg-slate-50">
-        <Link to={`/products/${product.id}`} className="block w-full h-full">
+        <Link to={`/products/${product.id || ''}`} className="block w-full h-full">
           <img
             src={
               product.image ||
               'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400'
             }
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+            alt={product.name || 'Farm Produce'}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
           />
         </Link>
@@ -87,32 +93,32 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div>
           {/* Farmer & Location Origin */}
           <Link
-            to={product.farmer ? `/farmers/${product.farmer.id}` : '/farmers'}
+            to={farmerId ? `/farmers/${farmerId}` : '/farmers'}
             className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-800 transition"
           >
             <Tractor className="w-3.5 h-3.5 text-brand-600" />
-            <span className="truncate max-w-[170px]">{product.farmer?.farmName || 'Verified Farm'}</span>
+            <span className="truncate max-w-[170px]">{farmName}</span>
             <ShieldCheck className="w-3 h-3 text-brand-500" />
           </Link>
 
           {/* Product Name */}
-          <Link to={`/products/${product.id}`} className="block mt-1">
+          <Link to={`/products/${product.id || ''}`} className="block mt-1">
             <h3 className="font-display font-bold text-slate-900 text-base leading-snug group-hover:text-brand-700 transition line-clamp-2">
-              {product.name}
+              {product.name || 'Fresh Harvest'}
             </h3>
           </Link>
 
           <span className="text-xs text-slate-400 font-medium block mt-0.5">
-            Unit: 1 {product.unit}
+            Unit: 1 {product.unit || 'KG'}
           </span>
         </div>
 
-        {/* Price & Add to Cart Section (Blinkit style) */}
+        {/* Price & Add to Cart Section */}
         <div className="pt-2 border-t border-slate-100/80 flex items-center justify-between gap-3">
           <div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg sm:text-xl font-black text-slate-900">
-                ₹{product.price}
+                ₹{price}
               </span>
               <span className="text-xs text-slate-400 line-through font-semibold">
                 ₹{estimatedMarketPrice}
@@ -136,7 +142,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           ) : inCartQty > 0 ? (
             <div className="flex items-center bg-brand-600 text-white rounded-xl shadow-md p-0.5 ring-2 ring-brand-500/20">
               <button
-                onClick={() => updateQuantity(cartItem!.id, inCartQty - 1)}
+                onClick={() => {
+                  if (cartItem?.id) updateQuantity(cartItem.id, inCartQty - 1);
+                }}
                 className="p-1 hover:bg-brand-700 rounded-lg transition"
                 title="Decrease"
               >
@@ -146,7 +154,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 {inCartQty}
               </span>
               <button
-                onClick={() => updateQuantity(cartItem!.id, inCartQty + 1)}
+                onClick={() => {
+                  if (cartItem?.id) updateQuantity(cartItem.id, inCartQty + 1);
+                }}
                 className="p-1 hover:bg-brand-700 rounded-lg transition"
                 title="Increase"
               >
