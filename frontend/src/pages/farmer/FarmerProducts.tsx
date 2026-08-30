@@ -41,9 +41,6 @@ export const FarmerProducts: React.FC = () => {
       const validCats = Array.isArray(catRes) ? catRes : [];
       setProducts(validProds);
       setCategories(validCats);
-      if (validCats.length > 0 && !form.categoryId) {
-        setForm((prev) => ({ ...prev, categoryId: validCats[0].id }));
-      }
     } catch (err) {
       console.error(err);
       setProducts([]);
@@ -62,7 +59,7 @@ export const FarmerProducts: React.FC = () => {
     setEditingProduct(null);
     setForm({
       name: '',
-      categoryId: categories[0]?.id || '',
+      categoryId: '',
       description: '',
       price: '',
       estimatedMarketPrice: '',
@@ -266,6 +263,7 @@ export const FarmerProducts: React.FC = () => {
                 onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
+                <option value="" disabled>Select a Category</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
