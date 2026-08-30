@@ -14,6 +14,9 @@ import userRoutes from './user.routes';
 import forecastRoutes from './forecast.routes';
 import routeRoutes from './route.routes';
 
+import b2bRoutes from './b2b.routes';
+import logisticsRoutes from './logistics.routes';
+
 const router = Router();
 
 router.use('/auth', authRoutes);
@@ -29,5 +32,7 @@ router.use('/notifications', notificationRoutes);
 router.use('/user', userRoutes);
 router.use('/forecast', forecastRoutes);
 router.use('/routes', routeRoutes);
+router.use('/b2b', b2bRoutes);
+router.use('/logistics', logisticsRoutes);
 
 export default router;

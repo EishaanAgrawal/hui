@@ -28,6 +28,9 @@ export const FarmerProducts: React.FC = () => {
     minimumOrderQuantity: '1',
     organic: true,
     image: '',
+    bulkPricingEnabled: false,
+    bulkMinQty: '20',
+    bulkPrice: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -68,23 +71,29 @@ export const FarmerProducts: React.FC = () => {
       minimumOrderQuantity: '1',
       organic: true,
       image: '',
+      bulkPricingEnabled: false,
+      bulkMinQty: '20',
+      bulkPrice: '',
     });
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (p: Product) => {
-    setEditingProduct(p);
+  const handleOpenEditModal = (product: Product) => {
+    setEditingProduct(product);
     setForm({
-      name: p.name,
-      categoryId: p.categoryId,
-      description: p.description,
-      price: p.price.toString(),
-      estimatedMarketPrice: (p.estimatedMarketPrice || Math.round(p.price * 1.45)).toString(),
-      unit: p.unit,
-      availableQuantity: p.availableQuantity.toString(),
-      minimumOrderQuantity: p.minimumOrderQuantity.toString(),
-      organic: p.organic,
-      image: p.image || '',
+      name: product.name,
+      categoryId: product.categoryId,
+      description: product.description,
+      price: product.price.toString(),
+      estimatedMarketPrice: (product.estimatedMarketPrice || Math.round(product.price * 1.45)).toString(),
+      unit: product.unit,
+      availableQuantity: product.availableQuantity.toString(),
+      minimumOrderQuantity: product.minimumOrderQuantity.toString(),
+      organic: product.organic,
+      image: product.image || '',
+      bulkPricingEnabled: !!product.bulkPricing,
+      bulkMinQty: product.bulkPricing ? (product.bulkPricing as any)[0]?.minQty.toString() : '20',
+      bulkPrice: product.bulkPricing ? (product.bulkPricing as any)[0]?.price.toString() : '',
     });
     setIsModalOpen(true);
   };
@@ -93,24 +102,24 @@ export const FarmerProducts: React.FC = () => {
     e.preventDefault();
     setSaving(true);
     try {
+      const productData = {
+        name: form.name,
+        categoryId: form.categoryId,
+        description: form.description,
+        price: parseFloat(form.price),
+        estimatedMarketPrice: form.estimatedMarketPrice ? parseFloat(form.estimatedMarketPrice) : null,
+        unit: form.unit,
+        availableQuantity: parseFloat(form.availableQuantity),
+        minimumOrderQuantity: parseFloat(form.minimumOrderQuantity),
+        organic: form.organic,
+        image: form.image,
+        bulkPricing: form.bulkPricingEnabled && form.bulkPrice ? [{ minQty: parseFloat(form.bulkMinQty), maxQty: null, price: parseFloat(form.bulkPrice) }] : null
+      };
+
       if (editingProduct) {
-        await productApi.updateProduct(editingProduct.id, {
-          ...form,
-          price: parseFloat(form.price),
-          estimatedMarketPrice: form.estimatedMarketPrice ? parseFloat(form.estimatedMarketPrice) : undefined,
-          availableQuantity: parseFloat(form.availableQuantity),
-          minimumOrderQuantity: parseFloat(form.minimumOrderQuantity),
-          organic: Boolean(form.organic),
-        });
+        await productApi.updateProduct(editingProduct.id, productData);
       } else {
-        await productApi.createProduct({
-          ...form,
-          price: parseFloat(form.price),
-          estimatedMarketPrice: form.estimatedMarketPrice ? parseFloat(form.estimatedMarketPrice) : undefined,
-          availableQuantity: parseFloat(form.availableQuantity),
-          minimumOrderQuantity: parseFloat(form.minimumOrderQuantity),
-          organic: Boolean(form.organic),
-        });
+        await productApi.createProduct(productData);
       }
       setIsModalOpen(false);
       fetchProducts();
@@ -354,6 +363,52 @@ export const FarmerProducts: React.FC = () => {
             />
             <span>100% Certified Organic / Chemical-free produce</span>
           </label>
+
+          <div className="pt-4 border-t border-slate-100">
+            <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
+              <input
+                type="checkbox"
+                checked={form.bulkPricingEnabled}
+                onChange={(e) => setForm({ ...form, bulkPricingEnabled: e.target.checked })}
+                className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              <div>
+                <span className="font-bold text-slate-900 block text-sm">Enable Bulk/B2B Pricing</span>
+                <span className="text-xs text-slate-500 block">Offer a discount for large quantity orders.</span>
+              </div>
+            </label>
+
+            {form.bulkPricingEnabled && (
+              <div className="mt-4 grid grid-cols-2 gap-4 bg-brand-50 p-4 rounded-xl border border-brand-100">
+                <div>
+                  <label className="block text-xs font-bold text-brand-900 mb-1">
+                    Minimum Qty ({form.unit})
+                  </label>
+                  <input
+                    type="number"
+                    required={form.bulkPricingEnabled}
+                    min="2"
+                    value={form.bulkMinQty}
+                    onChange={(e) => setForm({ ...form, bulkMinQty: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-brand-900 mb-1">
+                    Bulk Price (₹ per {form.unit})
+                  </label>
+                  <input
+                    type="number"
+                    required={form.bulkPricingEnabled}
+                    min="1"
+                    value={form.bulkPrice}
+                    onChange={(e) => setForm({ ...form, bulkPrice: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
             <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>

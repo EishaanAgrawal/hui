@@ -21,6 +21,8 @@ model User {
   avatar       String?
   isActive     Boolean        @default(true)
   isVerified   Boolean        @default(false)
+  isBulkBuyer  Boolean        @default(false)
+  companyName  String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -31,6 +33,7 @@ model User {
   reviews       Review[]
   wishlist      Wishlist[]
   notifications Notification[]
+  rfqs          Rfq[]
 }
 
 model FarmerProfile {
@@ -66,6 +69,9 @@ model FarmerProfile {
   orderItems         OrderItem[]
   reviews            Review[]
   payouts            FarmerPayout[]
+  rfqs               Rfq[]
+  vehicles           Vehicle[]
+  deliveryBatches    DeliveryBatch[]
 }
 
 model Address {
@@ -119,6 +125,7 @@ model Product {
   unit                 String         @default("KG") // KG, GRAM, LITRE, PIECE, DOZEN, QUINTAL
   availableQuantity    Float          @default(0)
   minimumOrderQuantity Float          @default(1)
+  bulkPricing          Json?          // Array of { minQty, maxQty, price }
   organic              Boolean        @default(false)
   harvestDate          DateTime?
   image                String?
@@ -131,6 +138,7 @@ model Product {
   orderItems           OrderItem[]
   reviews              Review[]
   wishlistItems        Wishlist[]
+  rfqs                 Rfq[]
 }
 
 model ProductImage {
@@ -177,6 +185,8 @@ model Order {
   orderStatus             String       @default("CONFIRMED") // PENDING, CONFIRMED, ACCEPTED, PREPARING, READY_FOR_PICKUP, PICKED_UP, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, REJECTED
   deliveryAddressSnapshot String       // JSON stringified address details
   notes                   String?
+  batchId                 String?
+  batch                   DeliveryBatch? @relation(fields: [batchId], references: [id])
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
 
@@ -304,4 +314,65 @@ model DeliveryRouteStop {
   sequence  Int
   latitude  Float?
   longitude Float?
+}
+
+model Rfq {
+  id               String        @id @default(uuid())
+  buyerId          String
+  buyer            User          @relation(fields: [buyerId], references: [id])
+  productId        String
+  product          Product       @relation(fields: [productId], references: [id])
+  farmerId         String
+  farmer           FarmerProfile @relation(fields: [farmerId], references: [id])
+  requiredQuantity Float
+  deliveryAddress  String
+  preferredDate    DateTime?
+  notes            String?
+  status           String        @default("PENDING") // PENDING, QUOTED, ACCEPTED, REJECTED
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  
+  quotation        Quotation?
+}
+
+model Quotation {
+  id               String   @id @default(uuid())
+  rfqId            String   @unique
+  rfq              Rfq      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  quotedPrice      Float
+  availableQuantity Float
+  deliveryCost     Float    @default(0)
+  validUntil       DateTime?
+  notes            String?
+  status           String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Vehicle {
+  id               String        @id @default(uuid())
+  farmerId         String
+  farmer           FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  name             String
+  capacityKg       Float
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  batches          DeliveryBatch[]
+}
+
+model DeliveryBatch {
+  id               String        @id @default(uuid())
+  farmerId         String
+  farmer           FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  vehicleId        String?
+  vehicle          Vehicle?      @relation(fields: [vehicleId], references: [id])
+  status           String        @default("CREATED") // CREATED, OPTIMIZED, OUT_FOR_DELIVERY, COMPLETED
+  totalLoadKg      Float         @default(0)
+  clusterName      String?       // Geographic grouping name e.g., "Mumbai West"
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  orders           Order[]
 }

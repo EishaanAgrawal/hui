@@ -102,6 +102,7 @@ export interface Product {
   avgRating?: number;
   reviews?: Review[];
   relatedProducts?: Product[];
+  bulkPricing?: any;
 }
 
 export interface CartItem {

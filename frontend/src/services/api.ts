@@ -296,4 +296,46 @@ export const routeApi = {
   },
 };
 
+export const b2bApi = {
+  submitRfq: async (data: any) => {
+    const res = await api.post('/b2b/rfq', data);
+    return res.data;
+  },
+  getMyRfqs: async () => {
+    const res = await api.get('/b2b/rfq/buyer');
+    return res.data;
+  },
+  getFarmerRfqs: async () => {
+    const res = await api.get('/b2b/rfq/farmer');
+    return res.data;
+  },
+  submitQuotation: async (rfqId: string, data: any) => {
+    const res = await api.post(`/b2b/rfq/${rfqId}/quotation`, data);
+    return res.data;
+  },
+  acceptQuotation: async (quotationId: string) => {
+    const res = await api.post(`/b2b/quotation/${quotationId}/accept`);
+    return res.data;
+  }
+};
+
+export const logisticsApi = {
+  getReadyOrders: async () => {
+    const res = await api.get('/logistics/ready');
+    return res.data;
+  },
+  suggestClusters: async (orderIds: string[]) => {
+    const res = await api.post('/logistics/clusters/suggest', { orderIds });
+    return res.data;
+  },
+  createBatch: async (data: any) => {
+    const res = await api.post('/logistics/batches', data);
+    return res.data;
+  },
+  getInsights: async () => {
+    const res = await api.get('/logistics/insights');
+    return res.data;
+  }
+};
+
 export default api;

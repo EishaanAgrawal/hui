@@ -44,6 +44,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     { label: 'My Products', path: '/farmer/products', icon: Layers },
     { label: 'Inventory Control', path: '/farmer/inventory', icon: Package },
     { label: 'Fulfillment Orders', path: '/farmer/orders', icon: Package },
+    { label: 'B2B RFQs', path: '/farmer/rfqs', icon: Tractor },
+    { label: 'Smart Logistics', path: '/farmer/logistics', icon: Tractor },
     { label: 'Earnings & Payouts', path: '/farmer/earnings', icon: IndianRupee },
     { label: 'Reviews & Ratings', path: '/farmer/reviews', icon: Star },
     { label: 'Farm Profile', path: '/farmer/profile', icon: Settings },

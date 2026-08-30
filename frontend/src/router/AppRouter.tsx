@@ -23,6 +23,8 @@ import { OrderDetail } from '../pages/consumer/OrderDetail';
 import { Addresses } from '../pages/consumer/Addresses';
 import { Wishlist } from '../pages/consumer/Wishlist';
 import { Profile } from '../pages/consumer/Profile';
+import { B2BMarketplace } from '../pages/consumer/B2BMarketplace';
+import { B2BRFQs } from '../pages/consumer/B2BRFQs';
 
 // Farmer Pages
 import { FarmerDashboard } from '../pages/farmer/FarmerDashboard';
@@ -33,6 +35,8 @@ import { FarmerEarnings } from '../pages/farmer/FarmerEarnings';
 import { FarmerReviews } from '../pages/farmer/FarmerReviews';
 import { FarmerProfile } from '../pages/farmer/FarmerProfile';
 import { FarmerForecast } from '../pages/farmer/FarmerForecast';
+import { FarmerRFQs } from '../pages/farmer/FarmerRFQs';
+import { FarmerLogistics } from '../pages/farmer/FarmerLogistics';
 
 // Admin Pages
 import { AdminDashboard } from '../pages/admin/AdminDashboard';
@@ -242,6 +246,26 @@ export const AppRouter: React.FC = () => {
         }
       />
       <Route
+        path="/b2b"
+        element={
+          <Layout>
+            <ProtectedRoute>
+              <B2BMarketplace />
+            </ProtectedRoute>
+          </Layout>
+        }
+      />
+      <Route
+        path="/b2b/rfqs"
+        element={
+          <Layout>
+            <ProtectedRoute>
+              <B2BRFQs />
+            </ProtectedRoute>
+          </Layout>
+        }
+      />
+      <Route
         path="/profile"
         element={
           <Layout>
@@ -319,6 +343,26 @@ export const AppRouter: React.FC = () => {
       />
 
       {/* Admin Portal Pages */}
+      <Route
+        path="/farmer/rfqs"
+        element={
+          <Layout>
+            <ProtectedRoute allowedRoles={['FARMER']}>
+              <FarmerRFQs />
+            </ProtectedRoute>
+          </Layout>
+        }
+      />
+      <Route
+        path="/farmer/logistics"
+        element={
+          <Layout>
+            <ProtectedRoute allowedRoles={['FARMER']}>
+              <FarmerLogistics />
+            </ProtectedRoute>
+          </Layout>
+        }
+      />
       <Route
         path="/admin/dashboard"
         element={
