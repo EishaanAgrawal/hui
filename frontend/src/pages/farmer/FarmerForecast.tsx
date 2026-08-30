@@ -277,7 +277,7 @@ export const FarmerForecast: React.FC = () => {
                                 ) : (
                                     <div className="flex items-center gap-2">
                                         <Badge 
-                                            variant={item.trend.includes('Increasing') ? 'emerald' : item.trend.includes('Decreasing') ? 'red' : item.trend.includes('Stable') ? 'gray' : 'amber'} 
+                                            variant={item.trend.includes('Increasing') ? 'emerald' : item.trend.includes('Decreasing') ? 'red' : item.trend.includes('Stable') ? 'slate' : 'amber'} 
                                             size="sm"
                                         >
                                             {item.trend}
