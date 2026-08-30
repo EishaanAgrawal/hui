@@ -32,6 +32,7 @@ import { FarmerInventory } from '../pages/farmer/FarmerInventory';
 import { FarmerEarnings } from '../pages/farmer/FarmerEarnings';
 import { FarmerReviews } from '../pages/farmer/FarmerReviews';
 import { FarmerProfile } from '../pages/farmer/FarmerProfile';
+import { FarmerForecast } from '../pages/farmer/FarmerForecast';
 
 // Admin Pages
 import { AdminDashboard } from '../pages/admin/AdminDashboard';
@@ -305,6 +306,14 @@ export const AppRouter: React.FC = () => {
         element={
           <ProtectedRoute allowedRoles={['FARMER', 'ADMIN']}>
             <FarmerProfile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/farmer/forecast"
+        element={
+          <ProtectedRoute allowedRoles={['FARMER', 'ADMIN']}>
+            <FarmerForecast />
           </ProtectedRoute>
         }
       />

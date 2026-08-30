@@ -11,7 +11,13 @@ export const FarmerProfile: React.FC = () => {
   const { user } = useAuth();
   const [form, setForm] = useState({
     farmName: '',
-    location: '',
+    addressLine1: '',
+    addressLine2: '',
+    villageLocality: '',
+    city: '',
+    district: '',
+    state: '',
+    pincode: '',
     farmingType: '',
     farmSize: '',
     description: '',
@@ -26,14 +32,20 @@ export const FarmerProfile: React.FC = () => {
       .then((res) => {
         const f = res.farmer;
         if (f) {
-          setForm({
-            farmName: f.farmName || '',
-            location: f.location || '',
-            farmingType: f.farmingType || 'Certified Organic',
-            farmSize: f.farmSize || '15 Acres',
-            description: f.description || '',
-            experienceYears: f.experienceYears || 5,
-          });
+            setForm({
+              farmName: f.farmName || '',
+              addressLine1: (f as any).addressLine1 || '',
+              addressLine2: (f as any).addressLine2 || '',
+              villageLocality: (f as any).villageLocality || '',
+              city: (f as any).city || '',
+              district: (f as any).district || '',
+              state: (f as any).state || '',
+              pincode: (f as any).pincode || '',
+              farmingType: f.farmingType || 'Certified Organic',
+              farmSize: f.farmSize || '15 Acres',
+              description: f.description || '',
+              experienceYears: f.experienceYears || 5,
+            });
         }
       })
       .catch(console.error)
@@ -88,11 +100,42 @@ export const FarmerProfile: React.FC = () => {
               icon={<Building2 className="w-4 h-4" />}
             />
             <Input
-              label="Location (City, State)"
+              label="Address Line 1 (Plot/Survey No)"
               required
-              value={form.location}
-              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              value={form.addressLine1}
+              onChange={(e) => setForm({ ...form, addressLine1: e.target.value })}
               icon={<MapPin className="w-4 h-4" />}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Village / Locality"
+              value={form.villageLocality}
+              onChange={(e) => setForm({ ...form, villageLocality: e.target.value })}
+            />
+            <Input
+              label="City"
+              required
+              value={form.city}
+              onChange={(e) => setForm({ ...form, city: e.target.value })}
+            />
+            <Input
+              label="District"
+              value={form.district}
+              onChange={(e) => setForm({ ...form, district: e.target.value })}
+            />
+            <Input
+              label="State"
+              required
+              value={form.state}
+              onChange={(e) => setForm({ ...form, state: e.target.value })}
+            />
+            <Input
+              label="PIN Code"
+              required
+              value={form.pincode}
+              onChange={(e) => setForm({ ...form, pincode: e.target.value })}
             />
           </div>
 

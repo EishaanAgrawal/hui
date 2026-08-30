@@ -37,6 +37,10 @@ export const Checkout: React.FC = () => {
     phone: user?.phone || '',
     addressLine1: '',
     addressLine2: '',
+    flatHouse: '',
+    buildingApartment: '',
+    localityArea: '',
+    landmark: '',
     city: 'Mumbai',
     state: 'Maharashtra',
     postalCode: '400050',
@@ -379,20 +383,39 @@ export const Checkout: React.FC = () => {
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Flat / House No. (Optional)"
+              value={addressForm.flatHouse}
+              onChange={(e) => setAddressForm({ ...addressForm, flatHouse: e.target.value })}
+            />
+            <Input
+              label="Building / Apartment (Optional)"
+              value={addressForm.buildingApartment}
+              onChange={(e) => setAddressForm({ ...addressForm, buildingApartment: e.target.value })}
+            />
+          </div>
+
           <Input
-            label="Address Line 1"
+            label="Street / Road / Line 1"
             required
             value={addressForm.addressLine1}
             onChange={(e) => setAddressForm({ ...addressForm, addressLine1: e.target.value })}
-            placeholder="Flat, House No, Building, Street"
+            placeholder="Main street or road name"
           />
 
-          <Input
-            label="Address Line 2 (Optional)"
-            value={addressForm.addressLine2}
-            onChange={(e) => setAddressForm({ ...addressForm, addressLine2: e.target.value })}
-            placeholder="Landmark, Area"
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Locality / Area (Optional)"
+              value={addressForm.localityArea}
+              onChange={(e) => setAddressForm({ ...addressForm, localityArea: e.target.value })}
+            />
+            <Input
+              label="Nearby Landmark (Optional)"
+              value={addressForm.landmark}
+              onChange={(e) => setAddressForm({ ...addressForm, landmark: e.target.value })}
+            />
+          </div>
 
           <div className="grid grid-cols-3 gap-3">
             <Input

@@ -15,6 +15,7 @@ import {
   FolderTree,
   Menu,
   X,
+  TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -46,6 +47,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     { label: 'Earnings & Payouts', path: '/farmer/earnings', icon: IndianRupee },
     { label: 'Reviews & Ratings', path: '/farmer/reviews', icon: Star },
     { label: 'Farm Profile', path: '/farmer/profile', icon: Settings },
+    { label: 'AI Demand Forecast', path: '/farmer/forecast', icon: TrendingUp },
   ];
 
   const adminNavItems = [

@@ -11,6 +11,9 @@ import reviewRoutes from './review.routes';
 import notificationRoutes from './notification.routes';
 import userRoutes from './user.routes';
 
+import forecastRoutes from './forecast.routes';
+import routeRoutes from './route.routes';
+
 const router = Router();
 
 router.use('/auth', authRoutes);
@@ -24,5 +27,7 @@ router.use('/admin', adminRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/user', userRoutes);
+router.use('/forecast', forecastRoutes);
+router.use('/routes', routeRoutes);
 
 export default router;

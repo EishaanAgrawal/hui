@@ -344,11 +344,11 @@ export const Home: React.FC = () => {
               FarmDirect Quality Standard
             </span>
             <h2 className="font-display text-3xl sm:text-4xl font-black text-white">
-              From Soil to Table in 3 Simple Steps
+              From Soil to Table in 4 Simple Steps
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="bg-slate-800/60 rounded-3xl p-8 border border-slate-700/60 space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-brand-600/30 text-brand-400 flex items-center justify-center text-xl font-bold font-display">
                 1
@@ -376,6 +376,16 @@ export const Home: React.FC = () => {
               <h3 className="font-display text-lg font-bold text-white">Direct 24-Hour Delivery</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Express farm logistics brings nutrient-dense food to your doorstep while 85–90% goes directly to the grower.
+              </p>
+            </div>
+
+            <div className="bg-slate-800/60 rounded-3xl p-8 border border-slate-700/60 space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-brand-600/30 text-brand-400 flex items-center justify-center text-xl font-bold font-display">
+                4
+              </div>
+              <h3 className="font-display text-lg font-bold text-white">AI-Powered Logistics</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Uses AI for demand forecasting and route optimization to minimize waste and ensure the freshest delivery.
               </p>
             </div>
           </div>

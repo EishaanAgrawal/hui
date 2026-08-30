@@ -9,6 +9,7 @@ import {
   ORDER_STATUS,
 } from '../config/constants';
 import { notificationService } from '../services/notification.service';
+import { locationService } from '../services/location.service';
 
 export const createOrder = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
@@ -42,8 +43,26 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
       if (!address || address.userId !== req.user.userId) {
         return sendError(res, 'Selected delivery address not found', 404);
       }
+      
+      if (!address.latitude || !address.longitude) {
+         const fullAddressString = `${address.addressLine1}, ${address.city}, ${address.state} ${address.postalCode}`;
+         const coords = await locationService.getCoordinates(fullAddressString);
+         if (coords) {
+             address.latitude = coords.lat;
+             address.longitude = coords.lon;
+             await prisma.address.update({ where: { id: addressId }, data: { latitude: coords.lat, longitude: coords.lon } });
+         }
+      }
       deliveryAddressSnapshot = JSON.stringify(address);
     } else if (customAddress) {
+      if (!customAddress.latitude || !customAddress.longitude) {
+         const fullAddressString = `${customAddress.addressLine1}, ${customAddress.city}, ${customAddress.state} ${customAddress.postalCode}`;
+         const coords = await locationService.getCoordinates(fullAddressString);
+         if (coords) {
+             customAddress.latitude = coords.lat;
+             customAddress.longitude = coords.lon;
+         }
+      }
       deliveryAddressSnapshot = JSON.stringify(customAddress);
     } else {
       return sendError(res, 'A delivery address is required for checkout', 400, 'ADDRESS_REQUIRED');
@@ -110,7 +129,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
           deliveryFee,
           platformFee,
           total,
-          paymentStatus: 'SUCCESS', // default success for test/live simulation
+          paymentStatus: paymentProvider === 'CASH_ON_DELIVERY' ? 'PENDING' : 'SUCCESS',
           orderStatus: 'CONFIRMED',
           deliveryAddressSnapshot,
           notes,
@@ -129,10 +148,10 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
           payment: {
             create: {
               provider: paymentProvider,
-              transactionId: `tx_${Date.now()}_${randomSuffix}`,
+              transactionId: paymentProvider === 'CASH_ON_DELIVERY' ? null : `tx_${Date.now()}_${randomSuffix}`,
               amount: total,
               currency: 'INR',
-              status: 'SUCCESS',
+              status: paymentProvider === 'CASH_ON_DELIVERY' ? 'PENDING' : 'SUCCESS',
             },
           },
           delivery: {
@@ -217,6 +236,16 @@ export const getOrders = async (req: AuthRequest, res: Response): Promise<any> =
 
     const userRole = req.user.role;
     let where: any = {};
+    let itemsInclude: any = {
+      include: {
+        product: {
+          select: { image: true, name: true, unit: true },
+        },
+        farmer: {
+          select: { farmName: true, location: true },
+        },
+      },
+    };
 
     if (userRole === 'CONSUMER') {
       where.customerId = req.user.userId;
@@ -228,6 +257,9 @@ export const getOrders = async (req: AuthRequest, res: Response): Promise<any> =
       where.items = {
         some: { farmerId: farmerProfile.id },
       };
+      // CRITICAL FIX: Ensure the API only returns the farmer's own items, 
+      // preventing other farmers' items in a multi-farm order from leaking.
+      itemsInclude.where = { farmerId: farmerProfile.id };
     } else if (userRole === 'ADMIN') {
       // Admin sees all
     }
@@ -242,16 +274,7 @@ export const getOrders = async (req: AuthRequest, res: Response): Promise<any> =
         customer: {
           select: { name: true, email: true, phone: true },
         },
-        items: {
-          include: {
-            product: {
-              select: { image: true, name: true, unit: true },
-            },
-            farmer: {
-              select: { farmName: true, location: true },
-            },
-          },
-        },
+        items: itemsInclude,
         payment: true,
         delivery: true,
       },
@@ -269,22 +292,34 @@ export const getOrderById = async (req: AuthRequest, res: Response): Promise<any
     if (!req.user) return sendError(res, 'Unauthorized', 401);
     const { id } = req.params;
 
+    const userRole = req.user.role;
+    let itemsInclude: any = {
+      include: {
+        product: {
+          select: { id: true, name: true, image: true, unit: true, price: true },
+        },
+        farmer: {
+          select: { id: true, farmName: true, location: true, userId: true },
+        },
+      },
+    };
+
+    if (userRole === 'FARMER') {
+      const farmerProfile = await prisma.farmerProfile.findUnique({
+        where: { userId: req.user.userId },
+      });
+      if (farmerProfile) {
+          itemsInclude.where = { farmerId: farmerProfile.id };
+      }
+    }
+
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
         customer: {
           select: { id: true, name: true, email: true, phone: true, avatar: true },
         },
-        items: {
-          include: {
-            product: {
-              select: { id: true, name: true, image: true, unit: true, price: true },
-            },
-            farmer: {
-              select: { id: true, farmName: true, location: true, userId: true },
-            },
-          },
-        },
+        items: itemsInclude,
         payment: true,
         delivery: true,
         reviews: true,
@@ -300,7 +335,7 @@ export const getOrderById = async (req: AuthRequest, res: Response): Promise<any
     const isAdmin = req.user.role === 'ADMIN';
     const isFarmerOfOrder =
       req.user.role === 'FARMER' &&
-      order.items.some((item) => item.farmer.userId === req.user?.userId);
+      order.items.some((item: any) => item.farmer.userId === req.user?.userId);
 
     if (!isCustomer && !isAdmin && !isFarmerOfOrder) {
       return sendError(res, 'Unauthorized to view this order', 403);

@@ -10,13 +10,14 @@ import {
   Calendar,
   XCircle,
 } from 'lucide-react';
-import { orderApi, reviewApi } from '../../services/api';
+import { orderApi, reviewApi, routeApi } from '../../services/api';
 import { Order } from '../../types';
 import { OrderTimeline } from '../../components/common/OrderTimeline';
 import { Button } from '../../components/common/Button';
 import { Loader } from '../../components/common/Loader';
 import { Modal } from '../../components/common/Modal';
 import { Badge } from '../../components/common/Badge';
+import { RouteMap } from '../../components/common/RouteMap';
 
 export const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +32,22 @@ export const OrderDetail: React.FC = () => {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+
+  // Multi-Farm fulfillment state
+  const [routePlan, setRoutePlan] = useState<any>(null);
+  const [optimizing, setOptimizing] = useState(false);
+
+  const handleOptimizeMultiFarm = async () => {
+      setOptimizing(true);
+      try {
+          const res = await routeApi.optimizeMultiFarm(order!.id);
+          setRoutePlan(res);
+      } catch (err: any) {
+          alert(err.response?.data?.message || 'Failed to generate fulfillment plan');
+      } finally {
+          setOptimizing(false);
+      }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -99,6 +116,8 @@ export const OrderDetail: React.FC = () => {
       setSubmittingReview(false);
     }
   };
+
+  const uniqueFarmersCount = new Set((order.items || []).map(i => i.farmerId)).size;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
@@ -193,6 +212,101 @@ export const OrderDetail: React.FC = () => {
             </div>
           </div>
 
+          {/* Smart Fulfillment Plan (Multi-Farm Optimization) */}
+          {uniqueFarmersCount > 1 && (
+             <div className="bg-brand-50 rounded-3xl p-6 sm:p-8 border border-brand-200 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-brand-200/60 pb-4">
+                    <div>
+                        <h3 className="text-lg font-bold text-brand-900 flex items-center gap-2">
+                            <Truck className="w-5 h-5 text-brand-600" />
+                            SMART FULFILLMENT PLAN
+                        </h3>
+                        <p className="text-xs text-brand-700 mt-1">This order requires pickups from {uniqueFarmersCount} Farms.</p>
+                    </div>
+                    {!routePlan && (
+                        <Button
+                           onClick={handleOptimizeMultiFarm}
+                           loading={optimizing}
+                           size="sm"
+                           className="bg-brand-600 hover:bg-brand-700 text-white border-transparent"
+                        >
+                           Optimize Pickup Route
+                        </Button>
+                    )}
+                </div>
+
+                {routePlan ? (
+                    <div className="pt-2 space-y-4 text-sm text-slate-800">
+                       <h4 className="font-bold text-brand-800 uppercase text-[11px] tracking-wider mb-4">Optimized Pickup & Delivery Plan</h4>
+                       
+                       <RouteMap 
+                           startLocation={{
+                               lat: routePlan.optimizedStops[0].lat,
+                               lon: routePlan.optimizedStops[0].lon,
+                               name: routePlan.optimizedStops[0].name
+                           }}
+                           stops={routePlan.optimizedStops.slice(1)}
+                       />
+
+                       <div className="space-y-0 relative mt-6 before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-brand-200 before:to-transparent">
+                          {routePlan.optimizedStops.map((stop: any, idx: number) => (
+                             <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active py-4">
+                                {/* Marker */}
+                                <div className="flex items-center justify-center w-6 h-6 rounded-full border-4 border-white bg-brand-500 text-white text-[10px] font-bold shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                                   {idx === 0 ? 'S' : idx === routePlan.optimizedStops.length - 1 ? 'E' : stop.sequence}
+                                </div>
+                                
+                                {/* Content */}
+                                <div className="w-[calc(100%-2rem)] md:w-[calc(50%-1.5rem)] bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative">
+                                    {stop.type === 'DELIVERY' ? (
+                                        <Badge variant="emerald" size="sm" className="mb-2 inline-flex absolute -top-2 -right-2">FINAL DESTINATION</Badge>
+                                    ) : (
+                                        <Badge variant="blue" size="sm" className="mb-2 inline-flex absolute -top-2 -right-2">PICKUP</Badge>
+                                    )}
+                                    <h5 className="font-bold text-slate-900">{stop.sequence}. {stop.name}</h5>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        {stop.type === 'PICKUP' ? `Pickup: ${stop.details}` : `Deliver to: ${stop.address}`}
+                                    </p>
+                                    {stop.distanceFromPrevious > 0 && (
+                                        <p className="text-[10px] text-brand-600 font-bold mt-2 pt-2 border-t border-slate-100">
+                                            + {stop.distanceFromPrevious} km from previous stop
+                                        </p>
+                                    )}
+                                </div>
+                             </div>
+                          ))}
+                       </div>
+
+                       <div className="grid grid-cols-3 gap-4 pt-4 border-t border-brand-200/60 text-center">
+                          <div className="bg-white p-3 rounded-xl border border-brand-100">
+                              <span className="block text-2xl font-black text-brand-700">{routePlan.totalDistance} <span className="text-sm font-semibold text-slate-500">km</span></span>
+                              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Total Est. Distance</span>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-brand-100">
+                              <span className="block text-2xl font-black text-brand-700">{Math.round(routePlan.estimatedDuration / 60)}<span className="text-sm font-semibold text-slate-500">h</span> {routePlan.estimatedDuration % 60}<span className="text-sm font-semibold text-slate-500">m</span></span>
+                              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Est. Travel Time</span>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-brand-100">
+                              <span className="block text-2xl font-black text-brand-700">{routePlan.optimizedStops.length}</span>
+                              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Total Stops</span>
+                          </div>
+                       </div>
+                    </div>
+                ) : (
+                    <div className="pt-2">
+                        <p className="text-sm text-slate-600">
+                            Supplier Locations:
+                        </p>
+                        <ul className="list-disc pl-5 mt-2 space-y-1 text-sm text-slate-700 font-medium">
+                            {Array.from(new Set(order.items.map(i => i.farmer?.farmName))).map((fName: any, idx) => (
+                                <li key={idx}>{fName}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+             </div>
+          )}
+
           {/* Delivery & Logistics details */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-lg font-bold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
@@ -271,12 +385,22 @@ export const OrderDetail: React.FC = () => {
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-baseline justify-between text-base">
-                <span className="font-black text-slate-900">Total Paid</span>
+                <span className="font-black text-slate-900">{order.payment?.provider === 'CASH_ON_DELIVERY' ? 'Total to Pay' : 'Total Paid'}</span>
                 <span className="text-2xl font-black text-brand-900">₹{order.total}</span>
               </div>
 
-              <div className="pt-2 text-[11px] text-slate-400">
-                Payment Provider: <span className="font-bold text-slate-700">{order.payment?.provider || 'RAZORPAY'}</span>
+              <div className="pt-2 flex justify-between items-center text-[11px] text-slate-400">
+                <span>
+                  Provider: <span className="font-bold text-slate-700">{order.payment?.provider || 'RAZORPAY'}</span>
+                </span>
+                <span>
+                  Status: {' '}
+                  {order.payment?.provider === 'CASH_ON_DELIVERY' ? (
+                    <span className="font-bold text-amber-600">PENDING (COD)</span>
+                  ) : (
+                    <span className="font-bold text-emerald-600">{order.paymentStatus}</span>
+                  )}
+                </span>
               </div>
             </div>
           </div>

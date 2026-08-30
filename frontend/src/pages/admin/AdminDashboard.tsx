@@ -55,7 +55,7 @@ export const AdminDashboard: React.FC = () => {
     >
       <div className="space-y-8">
         {/* Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-2">
             <div className="flex items-center justify-between text-slate-400">
               <span className="text-xs font-bold uppercase tracking-wider">Gross Merchandise Value</span>
@@ -74,7 +74,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="bg-white rounded-3xl p-6 border border-indigo-200 bg-indigo-50/40 shadow-sm space-y-2">
             <div className="flex items-center justify-between text-indigo-400">
               <span className="text-xs font-bold uppercase tracking-wider text-indigo-900">
-                Platform Commission (5%)
+                Platform Commission
               </span>
               <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
                 <IndianRupee className="w-5 h-5" />
@@ -115,6 +115,23 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <p className="text-[11px] text-slate-500 font-medium">
               Live Produce SKUs: {summary.totalProducts || 0}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-3xl p-6 border border-brand-200 bg-brand-50 shadow-sm space-y-2">
+            <div className="flex items-center justify-between text-brand-500">
+              <span className="text-xs font-bold uppercase tracking-wider text-brand-800">
+                Smart Logistics
+              </span>
+              <div className="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center">
+                <Layers className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-brand-900">
+              {summary.multiFarmOrdersCount || 0}
+            </div>
+            <p className="text-[11px] text-brand-700 font-semibold">
+              Multi-farm orders require routing
             </p>
           </div>
         </div>

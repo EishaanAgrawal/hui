@@ -1,6 +1,7 @@
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 
@@ -41,7 +42,20 @@ model FarmerProfile {
   farmSize           String?        // e.g. "15 Acres"
   farmingType        String?        // e.g. "Organic", "Hydroponic", "Traditional", "Natural"
   experienceYears    Int?           @default(5)
-  location           String         // e.g. "Nashik, Maharashtra"
+  location           String         // e.g. "Nashik, Maharashtra" (Legacy/Display)
+  addressLine1       String?        // Plot/Survey No
+  addressLine2       String?        // Building/Landmark
+  villageLocality    String?
+  streetLane         String?
+  talukaTehsil       String?
+  city               String?
+  district           String?
+  state              String?
+  pincode            String?
+  country            String?        @default("India")
+  landmark           String?
+  googleMapsLink     String?
+  locationAccuracy   String?        // VERIFIED, APPROXIMATE, NEEDS_ATTENTION
   latitude           Float?
   longitude          Float?
   verificationStatus String         @default("VERIFIED") // PENDING, VERIFIED, REJECTED, SUSPENDED
@@ -60,14 +74,22 @@ model Address {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name         String
   phone        String
-  addressLine1 String
-  addressLine2 String?
-  city         String
-  state        String
-  postalCode   String
-  latitude     Float?
-  longitude    Float?
-  isDefault    Boolean  @default(false)
+  addressLine1      String
+  addressLine2      String?
+  flatHouse         String?
+  buildingApartment String?
+  streetLane        String?
+  localityArea      String?
+  landmark          String?
+  city              String
+  district          String?
+  state             String
+  postalCode        String
+  country           String?  @default("India")
+  latitude          Float?
+  longitude         Float?
+  geocodingStatus   String?
+  isDefault         Boolean  @default(false)
   createdAt    DateTime @default(now())
 }
 
@@ -258,4 +280,28 @@ model FarmerPayout {
   status      String        @default("PAID") // PENDING, PROCESSED, PAID, FAILED
   paidAt      DateTime?     @default(now())
   createdAt   DateTime      @default(now())
+}
+
+model DeliveryRoute {
+  id                String              @id @default(uuid())
+  createdBy         String              // FarmerProfile ID
+  startLocation     String              // Text description
+  startLatitude     Float?
+  startLongitude    Float?
+  totalDistance     Float               // in km
+  estimatedDuration Float               // in minutes
+  status            String              @default("PLANNED") // PLANNED, IN_PROGRESS, COMPLETED
+  createdAt         DateTime            @default(now())
+  
+  stops             DeliveryRouteStop[]
+}
+
+model DeliveryRouteStop {
+  id        String        @id @default(uuid())
+  routeId   String
+  route     DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  orderId   String
+  sequence  Int
+  latitude  Float?
+  longitude Float?
 }

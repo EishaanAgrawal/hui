@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { sendSuccess, sendError } from '../utils/response';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { locationService } from '../services/location.service';
 
 export const getFarmers = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -135,9 +136,37 @@ export const updateFarmerProfile = async (req: AuthRequest, res: Response): Prom
 
     if (!farmer) return sendError(res, 'Farmer profile not found', 404);
 
+    let dataToUpdate = { ...req.body };
+    
+    const { addressLine1, addressLine2, villageLocality, city, district, state, pincode, location } = dataToUpdate;
+    const hasLocationFields = addressLine1 || city || state || pincode || villageLocality || district;
+
+    if (hasLocationFields) {
+        // Automatically compile a legacy location string if missing
+        const fullAddress = [villageLocality, city, state, pincode].filter(Boolean).join(', ');
+        dataToUpdate.location = location || fullAddress;
+
+        // Automatically resolve coordinates based on new structured fields
+        const coords = await locationService.progressiveGeocode({
+            addressLine1: addressLine1,
+            addressLine2: addressLine2,
+            city: city || district,
+            state: state,
+            postalCode: pincode
+        });
+
+        if (coords) {
+            dataToUpdate.latitude = coords.lat;
+            dataToUpdate.longitude = coords.lon;
+            dataToUpdate.locationAccuracy = 'VERIFIED';
+        } else {
+            dataToUpdate.locationAccuracy = 'NEEDS_ATTENTION';
+        }
+    }
+
     const updated = await prisma.farmerProfile.update({
       where: { id: farmer.id },
-      data: req.body,
+      data: dataToUpdate,
     });
 
     return sendSuccess(res, updated, 'Profile updated successfully');

@@ -12,7 +12,7 @@ import {
 } from '../types';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -268,6 +268,30 @@ export const userApi = {
   },
   toggleWishlist: async (productId: string): Promise<{ inWishlist: boolean }> => {
     const res = await api.post('/user/wishlist/toggle', { productId });
+    return res.data.data;
+  },
+};
+
+// Forecast API
+export const forecastApi = {
+  getOverview: async (period?: number): Promise<any> => {
+    const res = await api.get('/forecast/farmer/overview', { params: { period } });
+    return res.data.data;
+  },
+};
+
+// Route API
+export const routeApi = {
+  optimize: async (orderIds: string[]): Promise<any> => {
+    const res = await api.post('/routes/optimize', { orderIds });
+    return res.data.data;
+  },
+  optimizeMultiFarm: async (orderId: string): Promise<any> => {
+    const res = await api.post('/routes/multi-farm', { orderId });
+    return res.data.data;
+  },
+  save: async (data: any): Promise<any> => {
+    const res = await api.post('/routes/save', data);
     return res.data.data;
   },
 };

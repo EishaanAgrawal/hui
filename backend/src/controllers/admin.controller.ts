@@ -74,6 +74,12 @@ export const getAdminDashboardStats = async (req: AuthRequest, res: Response): P
       count: c._count.products,
     }));
 
+    let multiFarmOrdersCount = 0;
+    orders.forEach(order => {
+        const uniqueFarmers = new Set(order.items.map(i => i.farmerId)).size;
+        if (uniqueFarmers > 1) multiFarmOrdersCount++;
+    });
+
     return sendSuccess(res, {
       summary: {
         totalGMV,
@@ -87,6 +93,7 @@ export const getAdminDashboardStats = async (req: AuthRequest, res: Response): P
         totalConsumers,
         totalProducts,
         pendingVerifications,
+        multiFarmOrdersCount,
       },
       salesTimeline,
       categoryDistribution,

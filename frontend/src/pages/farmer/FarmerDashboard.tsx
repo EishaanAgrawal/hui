@@ -129,6 +129,26 @@ export const FarmerDashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* AI Insights Card */}
+        <div className="bg-gradient-to-r from-brand-900 to-emerald-900 rounded-3xl p-6 border border-brand-800 shadow-md text-white flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md">
+              <TrendingUp className="w-6 h-6 text-brand-300" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black font-display">AI Demand Forecast</h3>
+              <p className="text-xs text-brand-200 mt-0.5">
+                Predicted Demand: <span className="text-white font-bold">↑ 18%</span> • Trending: <span className="text-white font-bold">Top Products</span>
+              </p>
+            </div>
+          </div>
+          <Link to="/farmer/forecast">
+            <Button variant="outline" className="border-brand-500 text-brand-50 hover:bg-brand-800 w-full sm:w-auto text-xs font-bold shadow-glow">
+              View Forecast
+            </Button>
+          </Link>
+        </div>
+
         {/* Sales Chart */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
