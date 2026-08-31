@@ -715,9 +715,7 @@ async function main() {
       orderId: pendingOrder1.id,
       pickupLocation: farmers[2].location,
       deliveryLocation: consumers[2].addresses[0].city + ', ' + consumers[2].addresses[0].state,
-      status: 'AWAITING_LOGISTICS',
-      distance: 12.5,
-      estimatedTime: 45
+      status: 'AWAITING_LOGISTICS'
     }
   });
 
@@ -726,9 +724,7 @@ async function main() {
       orderId: pendingOrder2.id,
       pickupLocation: farmers[3].location,
       deliveryLocation: consumers[3].addresses[0].city + ', ' + consumers[3].addresses[0].state,
-      status: 'AWAITING_LOGISTICS',
-      distance: 8.2,
-      estimatedTime: 30
+      status: 'AWAITING_LOGISTICS'
     }
   });
 
