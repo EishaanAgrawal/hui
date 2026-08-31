@@ -307,6 +307,28 @@ export const OrderDetail: React.FC = () => {
              </div>
           )}
 
+          {/* Logistics tracking */}
+          {order.logisticsJob && (
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-brand-600" />
+                  Live Logistics Tracking
+              </h3>
+              <div className="flex items-center gap-4 mt-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                  order.logisticsJob.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                  order.logisticsJob.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-700' :
+                  'bg-amber-100 text-amber-700'
+                }`}>
+                  {order.logisticsJob.status.replace(/_/g, ' ')}
+                </span>
+                <span className="text-sm text-slate-500 font-medium">
+                  {order.logisticsJob.vehicle ? `Assigned to ${order.logisticsJob.vehicle.type}` : 'Awaiting dispatch'}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Delivery & Logistics details */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-lg font-bold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">

@@ -151,7 +151,7 @@ export const FarmerOrders: React.FC = () => {
                       }
                       size="md"
                     >
-                      {order.orderStatus.replace(/_/g, ' ')}
+                      {order.orderStatus?.replace(/_/g, ' ') || 'UNKNOWN'}
                     </Badge>
                   </div>
                 </div>
@@ -172,8 +172,9 @@ export const FarmerOrders: React.FC = () => {
                           />
                           <div>
                             <p className="font-bold text-slate-900 text-sm">{item.productName}</p>
-                            <p className="text-slate-500">
+                            <p className="text-slate-500 flex items-center gap-1.5 mt-0.5">
                               Qty: {item.quantity} {item.unit} @ ₹{item.unitPrice}/{item.unit}
+                              {item.purchaseType === 'BULK_DEAL' && <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">Bulk Deal</span>}
                             </p>
                           </div>
                         </div>

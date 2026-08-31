@@ -7,7 +7,7 @@ interface CartContextType {
   cart: CartResponse | null;
   loading: boolean;
   itemCount: number;
-  addToCart: (productId: string, quantity?: number) => Promise<void>;
+  addToCart: (productId: string, quantity?: number, purchaseType?: string) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -48,13 +48,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshCart();
   }, [isAuthenticated]);
 
-  const addToCart = async (productId: string, quantity: number = 1) => {
+  const addToCart = async (productId: string, quantity: number = 1, purchaseType: string = 'NORMAL') => {
     if (!isAuthenticated) {
       showToast('Please sign in to add items to your cart.');
       return;
     }
     try {
-      const updatedCart = await cartApi.addItem(productId, quantity);
+      const updatedCart = await cartApi.addItem(productId, quantity, purchaseType);
       setCart(updatedCart);
       showToast('Added to fresh cart! 🌾');
     } catch (err: any) {

@@ -13,6 +13,7 @@ export const getProducts = async (req: Request, res: Response): Promise<any> => 
       organic,
       farmerId,
       location,
+      market,
       sort = 'newest',
       page = '1',
       limit = '12',
@@ -24,6 +25,7 @@ export const getProducts = async (req: Request, res: Response): Promise<any> => 
 
     const where: any = {
       isActive: true,
+      AND: []
     };
 
     if (category) {
@@ -56,12 +58,28 @@ export const getProducts = async (req: Request, res: Response): Promise<any> => 
 
     if (search) {
       const searchStr = (search as string).trim();
-      where.OR = [
-        { name: { contains: searchStr } },
-        { description: { contains: searchStr } },
-        { farmer: { farmName: { contains: searchStr } } },
-        { category: { name: { contains: searchStr } } },
-      ];
+      where.AND.push({
+        OR: [
+          { name: { contains: searchStr } },
+          { description: { contains: searchStr } },
+          { farmer: { farmName: { contains: searchStr } } },
+          { category: { name: { contains: searchStr } } },
+        ]
+      });
+    }
+
+    if (market === 'bulk') {
+      where.bulkPricingEnabled = true;
+    } else if (market === 'fresh') {
+      where.freshMarketEnabled = true;
+    } else {
+      where.AND.push({
+        OR: [{ freshMarketEnabled: true }, { bulkPricingEnabled: true }]
+      });
+    }
+
+    if (where.AND.length === 0) {
+      delete where.AND;
     }
 
     let orderBy: any = { createdAt: 'desc' };
@@ -242,7 +260,41 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<an
       organic,
       harvestDate,
       image,
+      freshMarketEnabled,
+      bulkPricingEnabled,
+      bulkMinimumQuantity,
+      bulkPrice,
     } = req.body;
+
+    const isBulkEnabled = Boolean(bulkPricingEnabled);
+    const isFreshEnabled = freshMarketEnabled !== undefined ? Boolean(freshMarketEnabled) : true;
+    const parsedPrice = parseFloat(price);
+    const parsedBulkPrice = bulkPrice ? parseFloat(bulkPrice) : null;
+    const parsedBulkMinQty = bulkMinimumQuantity ? parseFloat(bulkMinimumQuantity) : null;
+    const parsedMinOrderQty = minimumOrderQuantity ? parseFloat(minimumOrderQuantity) : 1;
+
+    if (isBulkEnabled && isFreshEnabled) {
+      if (parsedBulkPrice !== null && parsedBulkPrice >= parsedPrice) {
+        return sendError(res, 'Bulk price should normally be lower than the Fresh Market price to provide a meaningful bulk benefit.', 400);
+      }
+      if (parsedBulkMinQty !== null && parsedBulkMinQty <= parsedMinOrderQty) {
+        return sendError(res, 'Minimum bulk quantity should be greater than Fresh Market minimum order quantity.', 400);
+      }
+    }
+
+    if (isBulkEnabled) {
+      if (!parsedBulkPrice || parsedBulkPrice <= 0) return sendError(res, 'Bulk price must be greater than 0', 400);
+      if (!parsedBulkMinQty || parsedBulkMinQty <= 0) return sendError(res, 'Minimum bulk quantity must be greater than 0', 400);
+    }
+
+    if (isFreshEnabled) {
+      if (!parsedPrice || parsedPrice <= 0) return sendError(res, 'Fresh Market price must be greater than 0', 400);
+      if (!parsedMinOrderQty || parsedMinOrderQty <= 0) return sendError(res, 'Minimum fresh market quantity must be greater than 0', 400);
+    }
+
+    if (!isBulkEnabled && !isFreshEnabled) {
+      return sendError(res, 'At least one marketplace (Fresh Market or Bulk Deals) must be enabled.', 400);
+    }
 
     const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now().toString().slice(-4)}`;
 
@@ -262,6 +314,10 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<an
         harvestDate: harvestDate ? new Date(harvestDate) : new Date(),
         image: image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800',
         isActive: true,
+        freshMarketEnabled: isFreshEnabled,
+        bulkPricingEnabled: isBulkEnabled,
+        bulkMinimumQuantity: isBulkEnabled ? parsedBulkMinQty : null,
+        bulkPrice: isBulkEnabled ? parsedBulkPrice : null,
       },
       include: {
         category: true,
@@ -294,16 +350,59 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<an
       return sendError(res, 'Unauthorized to modify this product', 403);
     }
 
+    const {
+      freshMarketEnabled,
+      bulkPricingEnabled,
+      bulkMinimumQuantity,
+      bulkPrice,
+      price,
+      minimumOrderQuantity
+    } = req.body;
+
+    const isBulkEnabled = bulkPricingEnabled !== undefined ? Boolean(bulkPricingEnabled) : existing.bulkPricingEnabled;
+    const isFreshEnabled = freshMarketEnabled !== undefined ? Boolean(freshMarketEnabled) : existing.freshMarketEnabled;
+    const parsedPrice = price !== undefined ? parseFloat(price) : existing.price;
+    const parsedBulkPrice = bulkPrice !== undefined ? (bulkPrice ? parseFloat(bulkPrice) : null) : existing.bulkPrice;
+    const parsedBulkMinQty = bulkMinimumQuantity !== undefined ? (bulkMinimumQuantity ? parseFloat(bulkMinimumQuantity) : null) : existing.bulkMinimumQuantity;
+    const parsedMinOrderQty = minimumOrderQuantity !== undefined ? parseFloat(minimumOrderQuantity) : existing.minimumOrderQuantity;
+
+    if (isBulkEnabled && isFreshEnabled) {
+      if (parsedBulkPrice !== null && parsedBulkPrice >= parsedPrice) {
+        return sendError(res, 'Bulk price should normally be lower than the Fresh Market price to provide a meaningful bulk benefit.', 400);
+      }
+      if (parsedBulkMinQty !== null && parsedBulkMinQty <= parsedMinOrderQty) {
+        return sendError(res, 'Minimum bulk quantity should be greater than Fresh Market minimum order quantity.', 400);
+      }
+    }
+    
+    if (isBulkEnabled) {
+      if (!parsedBulkPrice || parsedBulkPrice <= 0) return sendError(res, 'Bulk price must be greater than 0', 400);
+      if (!parsedBulkMinQty || parsedBulkMinQty <= 0) return sendError(res, 'Minimum bulk quantity must be greater than 0', 400);
+    }
+
+    if (isFreshEnabled) {
+      if (!parsedPrice || parsedPrice <= 0) return sendError(res, 'Fresh Market price must be greater than 0', 400);
+      if (!parsedMinOrderQty || parsedMinOrderQty <= 0) return sendError(res, 'Minimum fresh market quantity must be greater than 0', 400);
+    }
+
+    if (!isBulkEnabled && !isFreshEnabled) {
+      return sendError(res, 'At least one marketplace (Fresh Market or Bulk Deals) must be enabled.', 400);
+    }
+
     const updated = await prisma.product.update({
       where: { id },
       data: {
         ...req.body,
-        price: req.body.price !== undefined ? parseFloat(req.body.price) : undefined,
+        price: parsedPrice,
         estimatedMarketPrice: req.body.estimatedMarketPrice !== undefined ? parseFloat(req.body.estimatedMarketPrice) : undefined,
         availableQuantity: req.body.availableQuantity !== undefined ? parseFloat(req.body.availableQuantity) : undefined,
-        minimumOrderQuantity: req.body.minimumOrderQuantity !== undefined ? parseFloat(req.body.minimumOrderQuantity) : undefined,
+        minimumOrderQuantity: parsedMinOrderQty,
         organic: req.body.organic !== undefined ? Boolean(req.body.organic) : undefined,
         harvestDate: req.body.harvestDate ? new Date(req.body.harvestDate) : undefined,
+        freshMarketEnabled: isFreshEnabled,
+        bulkPricingEnabled: isBulkEnabled,
+        bulkMinimumQuantity: isBulkEnabled ? parsedBulkMinQty : null,
+        bulkPrice: isBulkEnabled ? parsedBulkPrice : null,
       },
       include: {
         category: true,

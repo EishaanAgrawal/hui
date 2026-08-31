@@ -13,6 +13,10 @@ export const createProductSchema = z.object({
     organic: z.boolean().default(false),
     harvestDate: z.string().optional(),
     image: z.string().optional(),
+    bulkPricingEnabled: z.boolean().optional(),
+    freshMarketEnabled: z.boolean().optional(),
+    bulkMinimumQuantity: z.number().positive().optional(),
+    bulkPrice: z.number().positive().optional(),
   }),
 });
 
@@ -30,5 +34,9 @@ export const updateProductSchema = z.object({
     harvestDate: z.string().optional(),
     image: z.string().optional(),
     isActive: z.boolean().optional(),
+    bulkPricingEnabled: z.boolean().optional(),
+    freshMarketEnabled: z.boolean().optional(),
+    bulkMinimumQuantity: z.number().positive().optional(),
+    bulkPrice: z.number().positive().optional(),
   }),
 });

@@ -10,6 +10,7 @@ import {
 } from '../config/constants';
 import { notificationService } from '../services/notification.service';
 import { locationService } from '../services/location.service';
+import { logisticsService } from '../services/logistics.service';
 
 export const createOrder = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
@@ -83,13 +84,27 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
           throw new Error(`Product "${item.product.name}" is no longer available.`);
         }
 
-        if (product.availableQuantity < item.quantity) {
+        const trueAvailable = product.availableQuantity - product.reservedQuantity;
+
+        if (trueAvailable < item.quantity) {
           throw new Error(
-            `Insufficient stock for "${product.name}". Available: ${product.availableQuantity} ${product.unit}, in cart: ${item.quantity}`
+            `Insufficient stock for "${product.name}". Available: ${trueAvailable} ${product.unit}, in cart: ${item.quantity}`
           );
         }
 
-        const itemSubtotal = item.quantity * product.price;
+        let activePrice = product.price;
+        if (item.purchaseType === 'BULK_DEAL') {
+          if (!product.bulkPricingEnabled || item.quantity < (product.bulkMinimumQuantity || 0) || !product.bulkPrice) {
+            throw new Error(`Invalid bulk purchase parameters for "${product.name}".`);
+          }
+          activePrice = product.bulkPrice;
+        } else if (item.purchaseType === 'FRESH_MARKET') {
+          if (!product.freshMarketEnabled) {
+            throw new Error(`Fresh Market is not available for "${product.name}".`);
+          }
+        }
+
+        const itemSubtotal = item.quantity * activePrice;
         subtotal += itemSubtotal;
 
         // Group farmer sales
@@ -102,12 +117,19 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
         farmerItemsMap[product.farmerId].amount += itemSubtotal;
 
         // Deduct inventory
+        const isPaid = paymentProvider !== 'CASH_ON_DELIVERY';
         await tx.product.update({
           where: { id: product.id },
           data: {
             availableQuantity: {
               decrement: item.quantity,
             },
+            reservedQuantity: {
+              increment: isPaid ? 0 : item.quantity,
+            },
+            soldQuantity: {
+              increment: isPaid ? item.quantity : 0,
+            }
           },
         });
       }
@@ -133,16 +155,19 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
           orderStatus: 'CONFIRMED',
           deliveryAddressSnapshot,
           notes,
+
+
           items: {
             create: cart.items.map((item) => ({
               productId: item.productId,
               farmerId: item.product.farmerId,
               productName: item.product.name,
-              unitPrice: item.product.price,
+              unitPrice: item.purchaseType === 'BULK_DEAL' ? (item.product.bulkPrice || item.product.price) : item.product.price,
               quantity: item.quantity,
               unit: item.product.unit,
-              subtotal: item.quantity * item.product.price,
+              subtotal: item.quantity * (item.purchaseType === 'BULK_DEAL' ? (item.product.bulkPrice || item.product.price) : item.product.price),
               status: 'CONFIRMED',
+              purchaseType: item.purchaseType,
             })),
           },
           payment: {
@@ -194,6 +219,10 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
       });
 
       return order;
+    },
+    {
+      maxWait: 5000, // 5s max wait to connect to prisma
+      timeout: 20000, // 20s transaction timeout (up from 5s)
     });
 
     // Send notifications
@@ -208,7 +237,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
     // Notify farmers about the new order
     const farmerUserIds = await prisma.farmerProfile.findMany({
       where: {
-        id: { in: newOrder.items.map((i) => i.farmerId) },
+        id: { in: newOrder.items.map((i: any) => i.farmerId) },
       },
       select: { userId: true, farmName: true },
     });
@@ -222,6 +251,11 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
         link: `/farmer/orders/${newOrder.id}`,
       });
     }
+
+    // Trigger Logistics asynchronously
+    logisticsService.triggerLogisticsForOrder(newOrder.id).catch((e) => {
+      console.error('[Order Controller] Logistics hook failed:', e);
+    });
 
     return sendSuccess(res, newOrder, 'Order placed successfully', 201);
   } catch (error: any) {
@@ -394,6 +428,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
       where: { id },
       data: {
         orderStatus: status,
+        paymentStatus: status === 'DELIVERED' && order.paymentStatus === 'PENDING' ? 'SUCCESS' : undefined,
         delivery: deliveryStatus
           ? {
               update: {
@@ -409,6 +444,21 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
         payment: true,
       },
     });
+
+    if (status === 'DELIVERED' && order.orderStatus !== 'DELIVERED') {
+      // Convert reserved to sold if they were reserved (e.g. COD order now delivered)
+      for (const item of order.items) {
+        if (order.paymentStatus === 'PENDING') {
+          await prisma.product.update({
+            where: { id: item.productId },
+            data: {
+              reservedQuantity: { decrement: item.quantity },
+              soldQuantity: { increment: item.quantity },
+            },
+          });
+        }
+      }
+    }
 
     // Notify customer
     await notificationService.notify({
@@ -460,12 +510,19 @@ export const cancelOrder = async (req: AuthRequest, res: Response): Promise<any>
     const cancelled = await prisma.$transaction(async (tx) => {
       // Restore inventory
       for (const item of order.items) {
+        const isPaid = order.paymentStatus === 'SUCCESS';
         await tx.product.update({
           where: { id: item.productId },
           data: {
             availableQuantity: {
               increment: item.quantity,
             },
+            reservedQuantity: {
+              decrement: isPaid ? 0 : item.quantity,
+            },
+            soldQuantity: {
+              decrement: isPaid ? item.quantity : 0,
+            }
           },
         });
       }

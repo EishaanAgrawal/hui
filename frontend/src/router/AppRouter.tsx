@@ -23,8 +23,7 @@ import { OrderDetail } from '../pages/consumer/OrderDetail';
 import { Addresses } from '../pages/consumer/Addresses';
 import { Wishlist } from '../pages/consumer/Wishlist';
 import { Profile } from '../pages/consumer/Profile';
-import { B2BMarketplace } from '../pages/consumer/B2BMarketplace';
-import { B2BRFQs } from '../pages/consumer/B2BRFQs';
+
 
 // Farmer Pages
 import { FarmerDashboard } from '../pages/farmer/FarmerDashboard';
@@ -35,8 +34,7 @@ import { FarmerEarnings } from '../pages/farmer/FarmerEarnings';
 import { FarmerReviews } from '../pages/farmer/FarmerReviews';
 import { FarmerProfile } from '../pages/farmer/FarmerProfile';
 import { FarmerForecast } from '../pages/farmer/FarmerForecast';
-import { FarmerRFQs } from '../pages/farmer/FarmerRFQs';
-import { FarmerLogistics } from '../pages/farmer/FarmerLogistics';
+
 
 // Admin Pages
 import { AdminDashboard } from '../pages/admin/AdminDashboard';
@@ -44,6 +42,8 @@ import { AdminFarmers } from '../pages/admin/AdminFarmers';
 import { AdminUsers } from '../pages/admin/AdminUsers';
 import { AdminOrders } from '../pages/admin/AdminOrders';
 import { AdminCategories } from '../pages/admin/AdminCategories';
+import { AdminLogistics } from '../pages/admin/AdminLogistics';
+import { DriverDashboard } from '../pages/driver/DriverDashboard';
 import { MobileBottomNav } from '../components/layout/MobileBottomNav';
 
 import { Loader } from '../components/common/Loader';
@@ -245,26 +245,7 @@ export const AppRouter: React.FC = () => {
           </Layout>
         }
       />
-      <Route
-        path="/b2b"
-        element={
-          <Layout>
-            <ProtectedRoute>
-              <B2BMarketplace />
-            </ProtectedRoute>
-          </Layout>
-        }
-      />
-      <Route
-        path="/b2b/rfqs"
-        element={
-          <Layout>
-            <ProtectedRoute>
-              <B2BRFQs />
-            </ProtectedRoute>
-          </Layout>
-        }
-      />
+
       <Route
         path="/profile"
         element={
@@ -343,26 +324,7 @@ export const AppRouter: React.FC = () => {
       />
 
       {/* Admin Portal Pages */}
-      <Route
-        path="/farmer/rfqs"
-        element={
-          <Layout>
-            <ProtectedRoute allowedRoles={['FARMER']}>
-              <FarmerRFQs />
-            </ProtectedRoute>
-          </Layout>
-        }
-      />
-      <Route
-        path="/farmer/logistics"
-        element={
-          <Layout>
-            <ProtectedRoute allowedRoles={['FARMER']}>
-              <FarmerLogistics />
-            </ProtectedRoute>
-          </Layout>
-        }
-      />
+
       <Route
         path="/admin/dashboard"
         element={
@@ -401,6 +363,24 @@ export const AppRouter: React.FC = () => {
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminCategories />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/logistics"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminLogistics />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Driver Portal Pages */}
+      <Route
+        path="/driver/dashboard"
+        element={
+          <Layout>
+            <DriverDashboard />
+          </Layout>
         }
       />
 

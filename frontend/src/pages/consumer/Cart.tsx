@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ShoppingBag,
@@ -9,11 +9,68 @@ import {
   ShieldCheck,
   Tractor,
   Sparkles,
+  PackageCheck,
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common/Button';
 import { EmptyState } from '../../components/common/EmptyState';
+
+const CartQuantityInput = ({ item, updateQuantity }: { item: any, updateQuantity: (id: string, qty: number) => void }) => {
+  const [inputValue, setInputValue] = useState(item.quantity.toString());
+
+  useEffect(() => {
+    setInputValue(item.quantity.toString());
+  }, [item.quantity]);
+
+  const minQty = item.purchaseType === 'BULK_DEAL' ? (item.product.bulkMinimumQuantity || 1) : (item.product.minimumOrderQuantity || 1);
+  const maxQty = (item.product.availableQuantity || 0) - (item.product.reservedQuantity || 0) + item.quantity;
+
+  const handleBlur = () => {
+    let parsed = parseInt(inputValue, 10);
+    if (isNaN(parsed) || parsed < minQty) parsed = minQty;
+    if (parsed > maxQty) parsed = maxQty;
+    
+    setInputValue(parsed.toString());
+    if (parsed !== item.quantity) {
+      updateQuantity(item.id, parsed);
+    }
+  };
+
+  return (
+    <div className="flex items-center bg-slate-100 rounded-xl p-1 focus-within:ring-2 focus-within:ring-brand-500 transition-shadow">
+      <button
+        onClick={() => {
+           const next = Math.max(minQty, item.quantity - 1);
+           updateQuantity(item.id, next);
+        }}
+        className="p-1 rounded-lg text-slate-600 hover:bg-white disabled:opacity-30"
+        disabled={item.quantity <= minQty}
+      >
+        <Minus className="w-3.5 h-3.5" />
+      </button>
+      <input 
+        type="number"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onBlur={handleBlur}
+        className="w-12 text-center font-bold text-slate-900 text-xs bg-transparent focus:outline-none"
+        min={minQty}
+        max={maxQty}
+      />
+      <button
+        onClick={() => {
+           const next = Math.min(maxQty, item.quantity + 1);
+           updateQuantity(item.id, next);
+        }}
+        className="p-1 rounded-lg text-slate-600 hover:bg-white disabled:opacity-30"
+        disabled={item.quantity >= maxQty}
+      >
+        <Plus className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+};
 
 export const Cart: React.FC = () => {
   const { cart, loading, updateQuantity, removeItem, clearCart } = useCart();
@@ -57,6 +114,8 @@ export const Cart: React.FC = () => {
     Math.round(((cart?.subtotal || 0) / (cart?.freeDeliveryThreshold || 500)) * 100)
   );
 
+  const hasBulkDeal = cart?.items.some(item => item.purchaseType === 'BULK_DEAL');
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
       <div className="flex items-center justify-between">
@@ -74,6 +133,20 @@ export const Cart: React.FC = () => {
           <Trash2 className="w-3.5 h-3.5" /> Clear Cart
         </button>
       </div>
+
+      {hasBulkDeal && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:px-6 flex items-start gap-4">
+          <div className="bg-amber-100 text-amber-600 p-2 rounded-xl mt-0.5">
+            <PackageCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-amber-900">Bulk Deal Activated!</h3>
+            <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+              You've unlocked special wholesale pricing directly from the farm! Enjoy massive savings on your harvest, bypassing the middleman completely.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Free Delivery Progress Bar */}
       <div className="bg-brand-50 border border-brand-200 rounded-2xl p-4">
@@ -128,37 +201,23 @@ export const Cart: React.FC = () => {
                         }
                         alt={item.product.name}
                         className="w-16 h-16 rounded-2xl object-cover border border-slate-100"
+                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/150x150/f8fafc/94a3b8?text=Image+Unavailable'; }}
                       />
                       <div>
                         <h4 className="font-bold text-slate-900 text-sm">{item.product.name}</h4>
-                        <p className="text-xs text-slate-500">
-                          ₹{item.product.price} / {item.product.unit}
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+                          ₹{item.priceAtAddition} / {item.product.unit}
+                          {item.purchaseType === 'BULK_DEAL' && <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">Bulk Deal</span>}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between sm:justify-end gap-6">
                       {/* Quantity Stepper */}
-                      <div className="flex items-center bg-slate-100 rounded-xl p-1">
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="p-1 rounded-lg text-slate-600 hover:bg-white"
-                        >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="font-bold text-slate-900 px-3 text-xs">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="p-1 rounded-lg text-slate-600 hover:bg-white"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      <CartQuantityInput item={item} updateQuantity={updateQuantity} />
 
                       <span className="font-black text-slate-900 text-sm min-w-[60px] text-right">
-                        ₹{item.quantity * item.product.price}
+                        ₹{item.quantity * item.priceAtAddition}
                       </span>
 
                       <button

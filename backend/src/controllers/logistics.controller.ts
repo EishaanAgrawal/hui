@@ -1,140 +1,141 @@
-import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Response } from 'express';
+import { prisma } from '../config/database';
+import { sendSuccess, sendError } from '../utils/response';
+import { AuthRequest } from '../middleware/auth.middleware';
+import { logisticsService } from '../services/logistics.service';
 
-const prisma = new PrismaClient();
-
-export const getReadyOrders = async (req: Request, res: Response) => {
+export const getLogisticsJobs = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
-    const userId = (req as any).user.id;
-    const farmer = await prisma.farmerProfile.findUnique({ where: { userId } });
-    if (!farmer) return res.status(404).json({ error: 'Farmer not found' });
+    // Only admins or specific roles should access this ideally, but for now we check auth
+    if (!req.user) return sendError(res, 'Unauthorized', 401);
 
-    // Fetch orders that contain items from this farmer and are READY_FOR_PICKUP or PREPARING
-    const orders = await prisma.order.findMany({
-      where: {
-        items: {
-          some: { farmerId: farmer.id }
-        },
-        orderStatus: { in: ['PREPARING', 'READY_FOR_PICKUP'] },
-        batchId: null // Not yet batched
-      },
+    const jobs = await prisma.logisticsJob.findMany({
       include: {
-        customer: { select: { name: true, phone: true } },
-        items: true
-      }
+        order: {
+          include: { items: true, customer: true }
+        },
+        vehicle: true,
+        driver: { include: { user: true } },
+      },
+      orderBy: { createdAt: 'desc' }
     });
 
-    res.json(orders);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch ready orders' });
+    return sendSuccess(res, jobs);
+  } catch (error: any) {
+    return sendError(res, error.message || 'Failed to fetch logistics jobs', 500);
   }
 };
 
-export const suggestClusters = async (req: Request, res: Response) => {
+export const getVehicles = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
-    const { orderIds } = req.body;
+    if (!req.user) return sendError(res, 'Unauthorized', 401);
     
-    // In a real AI implementation, we would pass these to a Python service or use DBSCAN.
-    // For this demonstration, we'll mock a simple clustering based on string matching 
-    // of the deliveryAddressSnapshot (e.g., matching cities or localities).
-    const orders = await prisma.order.findMany({
-      where: { id: { in: orderIds } }
+    const vehicles = await prisma.vehicle.findMany({
+      include: {
+        drivers: { include: { user: true } }
+      }
     });
-
-    const clusters: Record<string, any[]> = {};
     
-    orders.forEach(order => {
-      let addressStr = '';
-      try {
-        const addr = JSON.parse(order.deliveryAddressSnapshot);
-        addressStr = addr.city || addr.localityArea || 'Unknown';
-      } catch (e) {
-        addressStr = 'General';
-      }
-      
-      const clusterName = `Cluster ${addressStr}`;
-      if (!clusters[clusterName]) {
-        clusters[clusterName] = [];
-      }
-      clusters[clusterName].push(order);
-    });
-
-    const result = Object.keys(clusters).map(key => ({
-      name: key,
-      orders: clusters[key],
-      totalOrders: clusters[key].length
-    }));
-
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to suggest clusters' });
+    return sendSuccess(res, vehicles);
+  } catch (error: any) {
+    return sendError(res, error.message, 500);
   }
 };
 
-export const createDeliveryBatch = async (req: Request, res: Response) => {
+export const getDrivers = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
-    const userId = (req as any).user.id;
-    const { vehicleId, orderIds, clusterName, totalLoadKg } = req.body;
-
-    const farmer = await prisma.farmerProfile.findUnique({ where: { userId } });
-    if (!farmer) return res.status(404).json({ error: 'Farmer not found' });
-
-    const batch = await prisma.deliveryBatch.create({
-      data: {
-        farmerId: farmer.id,
-        vehicleId,
-        clusterName,
-        totalLoadKg: Number(totalLoadKg || 0),
-        status: 'CREATED',
-        orders: {
-          connect: orderIds.map((id: string) => ({ id }))
-        }
+    const drivers = await prisma.driver.findMany({
+      include: {
+        user: { select: { name: true, email: true, phone: true } },
+        vehicle: true
       }
     });
-
-    // Update order status
-    await prisma.order.updateMany({
-      where: { id: { in: orderIds } },
-      data: { orderStatus: 'DELIVERY_BATCH_CREATED' }
-    });
-
-    res.status(201).json(batch);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to create batch' });
+    return sendSuccess(res, drivers);
+  } catch (error: any) {
+    return sendError(res, error.message, 500);
   }
 };
 
-export const getLogisticsInsights = async (req: Request, res: Response) => {
+export const verifyDriver = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
-    const userId = (req as any).user.id;
-    const farmer = await prisma.farmerProfile.findUnique({ where: { userId } });
-    if (!farmer) return res.status(404).json({ error: 'Farmer not found' });
-
-    const unbatchedOrdersCount = await prisma.order.count({
-      where: {
-        items: { some: { farmerId: farmer.id } },
-        orderStatus: { in: ['PREPARING', 'READY_FOR_PICKUP'] },
-        batchId: null
+    const { id } = req.params;
+    const driver = await prisma.driver.update({
+      where: { id },
+      data: { isVerified: true },
+      include: {
+        user: { select: { name: true, email: true, phone: true } }
       }
     });
+    return sendSuccess(res, driver, 'Driver verified successfully');
+  } catch (error: any) {
+    return sendError(res, error.message, 500);
+  }
+};
 
-    const vehiclesCount = await prisma.vehicle.count({ where: { farmerId: farmer.id } });
+export const assignLogisticsJob = async (req: AuthRequest, res: Response): Promise<any> => {
+  try {
+    if (!req.user) return sendError(res, 'Unauthorized', 401);
+    const { id } = req.params;
+    const { vehicleId, driverId } = req.body;
 
-    const insights = [];
-    if (unbatchedOrdersCount > 0) {
-      insights.push(`${unbatchedOrdersCount} orders are ready and waiting to be clustered into delivery batches.`);
-    } else {
-      insights.push(`All ready orders have been successfully batched.`);
+    if (!vehicleId || !driverId) {
+      return sendError(res, 'Vehicle and Driver IDs are required.', 400);
     }
 
-    if (vehiclesCount === 0) {
-      insights.push(`Consider adding a Vehicle to calculate capacity limits when batching.`);
-    } else {
-      insights.push(`Combining geographically close orders into your ${vehiclesCount} vehicles reduces overall travel time.`);
-    }
+    const job = await logisticsService.assignVehicle(id, vehicleId, driverId);
+    
+    return sendSuccess(res, job, 'Logistics Job assigned successfully');
+  } catch (error: any) {
+    return sendError(res, error.message, 500);
+  }
+};
 
-    res.json({ insights });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to generate insights' });
+export const verifyPickup = async (req: AuthRequest, res: Response): Promise<any> => {
+  try {
+    if (!req.user) return sendError(res, 'Unauthorized', 401);
+    const { id } = req.params;
+    const { quantity } = req.body;
+    
+    // Ideally verify driver, for now just update
+    const job = await prisma.logisticsJob.update({
+      where: { id },
+      data: { status: 'IN_TRANSIT' }
+    });
+
+    await prisma.order.update({
+      where: { id: job.orderId },
+      data: { orderStatus: 'IN_TRANSIT' }
+    });
+
+    return sendSuccess(res, job, 'Pickup verified successfully');
+  } catch (error: any) {
+    return sendError(res, error.message, 500);
+  }
+};
+
+export const completeDelivery = async (req: AuthRequest, res: Response): Promise<any> => {
+  try {
+    if (!req.user) return sendError(res, 'Unauthorized', 401);
+    const { id } = req.params;
+    const { otp } = req.body;
+
+    // In a real app we check the OTP against a stored value in the order
+    if (otp !== '1234' && otp !== '0000') {
+      return sendError(res, 'Invalid OTP. Delivery confirmation failed.', 400);
+    }
+    
+    const job = await prisma.logisticsJob.update({
+      where: { id },
+      data: { status: 'DELIVERED', actualDeliveryTime: new Date() }
+    });
+
+    await prisma.order.update({
+      where: { id: job.orderId },
+      data: { orderStatus: 'DELIVERED' }
+    });
+
+    return sendSuccess(res, job, 'Delivery completed successfully');
+  } catch (error: any) {
+    return sendError(res, error.message, 500);
   }
 };

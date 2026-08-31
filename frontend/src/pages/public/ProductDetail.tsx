@@ -16,6 +16,7 @@ import {
   Plus,
   Minus,
   MessageSquare,
+  Layers,
 } from 'lucide-react';
 import { productApi, reviewApi, userApi } from '../../services/api';
 import { Product, Review } from '../../types';
@@ -34,7 +35,9 @@ export const ProductDetail: React.FC = () => {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [quantity, setQuantity] = useState(1);
+  const [quantityInput, setQuantityInput] = useState<string>('1');
+  const [purchaseMode, setPurchaseMode] = useState<'FRESH_MARKET' | 'BULK_DEAL'>('FRESH_MARKET');
+
   const [isAdding, setIsAdding] = useState(false);
   const [inWishlist, setInWishlist] = useState(false);
 
@@ -51,7 +54,14 @@ export const ProductDetail: React.FC = () => {
       try {
         const data = await productApi.getProductById(id);
         setProduct(data);
-        setQuantity(data?.minimumOrderQuantity || 1);
+        if (data.freshMarketEnabled) {
+          setPurchaseMode('FRESH_MARKET');
+          setQuantityInput((data.minimumOrderQuantity || 1).toString());
+        } else if (data.bulkPricingEnabled) {
+          setPurchaseMode('BULK_DEAL');
+          setQuantityInput((data.bulkMinimumQuantity || 1).toString());
+        }
+
       } catch (err) {
         console.error('Failed to load product:', err);
         setProduct(null);
@@ -61,6 +71,15 @@ export const ProductDetail: React.FC = () => {
     };
     fetchDetail();
   }, [id]);
+
+  useEffect(() => {
+    if (purchaseMode === 'BULK_DEAL' && product?.bulkMinimumQuantity) {
+      setQuantityInput(product.bulkMinimumQuantity.toString());
+    }
+    if (purchaseMode === 'FRESH_MARKET' && product?.minimumOrderQuantity) {
+      setQuantityInput(product.minimumOrderQuantity.toString());
+    }
+  }, [purchaseMode, product]);
 
   if (loading) return <Loader fullPage message="Fetching direct farm produce details..." />;
   if (!product) {
@@ -75,9 +94,12 @@ export const ProductDetail: React.FC = () => {
   }
 
   const handleAddToCart = async () => {
+    const parsed = parseInt(quantityInput, 10);
+    if (isNaN(parsed) || parsed < activeMinQty || parsed > trueAvailable) return;
+    
     setIsAdding(true);
     try {
-      await addToCart(product.id, quantity);
+      await addToCart(product.id, parsed, purchaseMode);
     } finally {
       setIsAdding(false);
     }
@@ -121,9 +143,33 @@ export const ProductDetail: React.FC = () => {
     }
   };
 
-  const estimatedMarketPrice = product.estimatedMarketPrice || Math.round(product.price * 1.45);
-  const savingsAmount = Math.round(estimatedMarketPrice - product.price);
-  const farmerShare = product.farmerSharePercentage || Math.round((product.price / estimatedMarketPrice) * 100);
+  const isBulk = purchaseMode === 'BULK_DEAL';
+  const activePrice = isBulk && product.bulkPrice ? product.bulkPrice : product.price;
+  const activeMinQty = isBulk && product.bulkMinimumQuantity ? product.bulkMinimumQuantity : (product.minimumOrderQuantity || 1);
+  const trueAvailable = product.availableQuantity - (product.reservedQuantity || 0);
+
+  const estimatedMarketPrice = product.estimatedMarketPrice || Math.round(activePrice * 1.45);
+  const savingsAmount = Math.round(estimatedMarketPrice - activePrice);
+  const farmerShare = product.farmerSharePercentage || Math.round((activePrice / estimatedMarketPrice) * 100);
+
+  const parsedQty = parseInt(quantityInput, 10);
+  const isValidQty = !isNaN(parsedQty) && parsedQty >= activeMinQty && parsedQty <= trueAvailable;
+  const effectiveQty = isNaN(parsedQty) ? 0 : parsedQty;
+
+  const bulkSavingsPerUnit = product.price - (product.bulkPrice || product.price);
+  const totalBulkSavings = bulkSavingsPerUnit * effectiveQty;
+
+  const qtyError = !isNaN(parsedQty) && parsedQty < activeMinQty 
+    ? `Minimum ${isBulk ? 'bulk ' : ''}order is ${activeMinQty} ${product.unit}. You need at least ${activeMinQty - parsedQty} ${product.unit} more${isBulk ? ' to qualify for bulk pricing' : ''}.`
+    : !isNaN(parsedQty) && parsedQty > trueAvailable
+    ? `Only ${trueAvailable} ${product.unit} available in stock.`
+    : null;
+
+  console.log("HMR Trigger: Product Bulk Data ->", {
+    enabled: product.bulkPricingEnabled,
+    minQty: product.bulkMinimumQuantity,
+    price: product.bulkPrice
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12">
@@ -141,14 +187,15 @@ export const ProductDetail: React.FC = () => {
         {/* Left Image Section */}
         <div className="space-y-4">
           <div className="aspect-[4/3] rounded-3xl overflow-hidden bg-slate-100 border border-slate-200 relative shadow-md">
-            <img
-              src={
-                product.image ||
-                'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800'
-              }
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
+              <img
+                src={
+                  product.image ||
+                  'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800'
+                }
+                alt={product.name}
+                className="w-full h-full object-cover"
+                onError={(e) => { e.currentTarget.src = 'https://placehold.co/800x600/f8fafc/94a3b8?text=Product+Image+Unavailable'; }}
+              />
             {product.organic && (
               <div className="absolute top-4 left-4">
                 <Badge variant="organic" size="md">
@@ -196,20 +243,63 @@ export const ProductDetail: React.FC = () => {
               </div>
               <div className="flex items-center gap-1.5 font-medium">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>In Stock: {product.availableQuantity} {product.unit}</span>
+                <span>In Stock: {trueAvailable} {product.unit}</span>
               </div>
             </div>
           </div>
 
+
+
           {/* Pricing Box */}
-          <div className="bg-brand-50/60 border border-brand-200 rounded-3xl p-6">
+          <div className="bg-brand-50/60 border-brand-200 border rounded-3xl p-6 transition-colors">
+            
+            {product.bulkPricingEnabled && product.freshMarketEnabled && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <button
+                  onClick={() => setPurchaseMode('FRESH_MARKET')}
+                  className={`p-4 text-left rounded-2xl border-2 transition ${
+                    purchaseMode === 'FRESH_MARKET'
+                      ? 'border-brand-600 bg-brand-50 shadow-sm'
+                      : 'border-slate-200 bg-white hover:border-brand-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <ShoppingCart className={`w-4 h-4 ${purchaseMode === 'FRESH_MARKET' ? 'text-brand-600' : 'text-slate-400'}`} />
+                    <span className={`font-bold ${purchaseMode === 'FRESH_MARKET' ? 'text-brand-900' : 'text-slate-600'}`}>
+                      FRESH MARKET
+                    </span>
+                  </div>
+                  <div className="text-xl font-black text-slate-900">₹{product.price} <span className="text-xs font-bold text-slate-500">/ {product.unit}</span></div>
+                  <div className="text-xs text-slate-500 mt-1">Min {product.minimumOrderQuantity || 1} {product.unit}</div>
+                </button>
+
+                <button
+                  onClick={() => setPurchaseMode('BULK_DEAL')}
+                  className={`p-4 text-left rounded-2xl border-2 transition ${
+                    purchaseMode === 'BULK_DEAL'
+                      ? 'border-brand-600 bg-brand-50 shadow-sm'
+                      : 'border-slate-200 bg-white hover:border-brand-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Layers className={`w-4 h-4 ${purchaseMode === 'BULK_DEAL' ? 'text-brand-600' : 'text-slate-400'}`} />
+                    <span className={`font-bold ${purchaseMode === 'BULK_DEAL' ? 'text-brand-900' : 'text-slate-600'}`}>
+                      BULK DEAL
+                    </span>
+                  </div>
+                  <div className="text-xl font-black text-slate-900">₹{product.bulkPrice} <span className="text-xs font-bold text-slate-500">/ {product.unit}</span></div>
+                  <div className="text-xs text-brand-700 font-bold mt-1">Min {product.bulkMinimumQuantity} {product.unit}</div>
+                </button>
+              </div>
+            )}
+
             <div className="flex items-baseline justify-between">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-brand-800 block">
-                  Direct Farm Price
+                <span className="text-xs font-bold uppercase tracking-wider block text-brand-800">
+                  {isBulk ? 'Bulk Price' : 'Direct Farm Price'}
                 </span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl sm:text-4xl font-black text-brand-900">₹{product.price}</span>
+                  <span className="text-3xl sm:text-4xl font-black text-brand-900">₹{activePrice}</span>
                   <span className="text-sm font-bold text-slate-500">/{product.unit}</span>
                 </div>
               </div>
@@ -224,39 +314,94 @@ export const ProductDetail: React.FC = () => {
               </div>
             </div>
 
-            {/* Quantity Stepper & Add to Cart */}
-            <div className="mt-6 flex flex-col sm:flex-row items-center gap-4">
-              <div className="flex items-center bg-white rounded-2xl border border-slate-200 p-1 shadow-sm w-full sm:w-auto justify-between">
-                <button
-                  onClick={() => setQuantity((q) => Math.max(product.minimumOrderQuantity || 1, q - 1))}
-                  className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-30"
-                  disabled={quantity <= (product.minimumOrderQuantity || 1)}
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="font-bold text-slate-900 px-4 text-sm">
-                  {quantity} {product.unit}
-                </span>
-                <button
-                  onClick={() => setQuantity((q) => Math.min(product.availableQuantity, q + 1))}
-                  className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-30"
-                  disabled={quantity >= product.availableQuantity}
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+            {isBulk && totalBulkSavings > 0 && (
+              <div className="mt-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm space-y-2">
+                <div className="flex justify-between font-medium">
+                  <span className="text-emerald-700">Regular Price:</span>
+                  <span>{effectiveQty} {product.unit} × ₹{product.price} = ₹{effectiveQty * product.price}</span>
+                </div>
+                <div className="flex justify-between font-medium">
+                  <span className="text-emerald-700">Bulk Price:</span>
+                  <span>{effectiveQty} {product.unit} × ₹{product.bulkPrice} = ₹{effectiveQty * (product.bulkPrice || 0)}</span>
+                </div>
+                <div className="pt-2 border-t border-emerald-200 flex justify-between font-black text-base">
+                  <span>💰 You Save</span>
+                  <span>₹{totalBulkSavings}</span>
+                </div>
               </div>
+            )}
 
-              <Button
-                onClick={handleAddToCart}
-                loading={isAdding}
-                disabled={product.availableQuantity <= 0}
-                size="lg"
-                variant="primary"
-                className="w-full sm:flex-1 font-bold shadow-lg shadow-brand-600/30"
-                icon={<ShoppingCart className="w-5 h-5" />}
-              >
-                {product.availableQuantity > 0 ? `Add ${quantity} ${product.unit} to Cart` : 'Sold Out'}
-              </Button>
+            {/* Quantity Stepper & Add to Cart */}
+            <div className="mt-6">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="flex items-center bg-white rounded-2xl border border-slate-200 p-1 shadow-sm w-full sm:w-auto justify-between focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-brand-500 transition-shadow">
+                  <button
+                    onClick={() => {
+                      const curr = isNaN(parsedQty) ? activeMinQty : parsedQty;
+                      setQuantityInput(Math.max(activeMinQty, curr - 1).toString());
+                    }}
+                    className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    disabled={effectiveQty <= activeMinQty}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <div className="flex items-center px-2">
+                    <input 
+                      type="number"
+                      value={quantityInput}
+                      onChange={(e) => setQuantityInput(e.target.value)}
+                      onBlur={() => {
+                        if (isNaN(parsedQty) || quantityInput === '') {
+                          setQuantityInput(activeMinQty.toString());
+                        } else if (parsedQty < activeMinQty) {
+                          setQuantityInput(activeMinQty.toString());
+                        } else if (parsedQty > trueAvailable) {
+                          setQuantityInput(trueAvailable.toString());
+                        }
+                      }}
+                      className="w-16 text-center font-bold text-slate-900 text-sm focus:outline-none bg-transparent"
+                      min={activeMinQty}
+                      max={trueAvailable}
+                    />
+                    <span className="font-bold text-slate-900 text-sm">{product.unit}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const curr = isNaN(parsedQty) ? activeMinQty : parsedQty;
+                      setQuantityInput(Math.min(trueAvailable, curr + 1).toString());
+                    }}
+                    className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    disabled={effectiveQty >= trueAvailable}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <Button
+                  onClick={handleAddToCart}
+                  loading={isAdding}
+                  disabled={trueAvailable <= 0 || !isValidQty}
+                  size="lg"
+                  variant="primary"
+                  className="w-full sm:flex-1 font-bold shadow-lg shadow-brand-600/30"
+                  icon={<ShoppingCart className="w-5 h-5" />}
+                >
+                  {trueAvailable <= 0 
+                    ? 'Sold Out' 
+                    : !isValidQty 
+                    ? 'Invalid Quantity'
+                    : isBulk 
+                    ? `Add ${effectiveQty} ${product.unit} Bulk Order` 
+                    : `Add ${effectiveQty} ${product.unit} to Cart`}
+                </Button>
+              </div>
+              
+              {/* Validation Message */}
+              {qtyError && (
+                <p className="mt-3 text-xs font-semibold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-100">
+                  {qtyError}
+                </p>
+              )}
             </div>
           </div>
 
@@ -316,7 +461,7 @@ export const ProductDetail: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
               <span className="text-xs text-emerald-800 font-semibold block">Farmer Direct Payout</span>
-              <span className="text-2xl font-black text-emerald-950">₹{product.price}/{product.unit}</span>
+              <span className="text-2xl font-black text-emerald-950">₹{activePrice}/{product.unit}</span>
               <span className="text-[11px] text-emerald-700 block mt-1">100% of farm listed price</span>
             </div>
 
@@ -328,7 +473,7 @@ export const ProductDetail: React.FC = () => {
 
             <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200">
               <span className="text-xs text-blue-800 font-semibold block">Platform Service Fee (5%)</span>
-              <span className="text-2xl font-black text-blue-950">₹{Math.round(product.price * 0.05)}/{product.unit}</span>
+              <span className="text-2xl font-black text-blue-950">₹{Math.round(activePrice * 0.05)}/{product.unit}</span>
               <span className="text-[11px] text-blue-700 block mt-1">Quality verification & software</span>
             </div>
           </div>

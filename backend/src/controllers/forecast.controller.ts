@@ -23,7 +23,11 @@ export const getForecastOverview = async (req: AuthRequest, res: Response): Prom
     });
 
     const orderItems = await prisma.orderItem.findMany({
-      where: { farmerId: farmer.id, status: { in: ['CONFIRMED', 'ACCEPTED', 'PREPARING', 'READY', 'DELIVERED'] } },
+      where: { 
+        farmerId: farmer.id, 
+        status: { in: ['CONFIRMED', 'ACCEPTED', 'PREPARING', 'READY', 'DELIVERED'] },
+
+      },
       include: { order: { select: { createdAt: true } } },
     });
 

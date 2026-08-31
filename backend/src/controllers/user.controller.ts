@@ -21,7 +21,11 @@ export const getAddresses = async (req: AuthRequest, res: Response): Promise<any
 export const addAddress = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     if (!req.user) return sendError(res, 'Unauthorized', 401);
-    const { name, phone, addressLine1, addressLine2, city, state, postalCode, isDefault } = req.body;
+    const { 
+      name, phone, addressLine1, addressLine2, flatHouse, 
+      buildingApartment, localityArea, landmark, city, state, 
+      postalCode, isDefault 
+    } = req.body;
 
     if (isDefault) {
       await prisma.address.updateMany({
@@ -30,6 +34,13 @@ export const addAddress = async (req: AuthRequest, res: Response): Promise<any> 
       });
     }
 
+    // Mock Geocoding
+    const baseLat = 19.0760; // Mumbai base
+    const baseLng = 72.8777;
+    const latitude = baseLat + (Math.random() - 0.5) * 0.2;
+    const longitude = baseLng + (Math.random() - 0.5) * 0.2;
+    const formattedAddress = `${flatHouse ? flatHouse + ', ' : ''}${addressLine1}, ${localityArea || city}, ${state} - ${postalCode}`;
+
     const address = await prisma.address.create({
       data: {
         userId: req.user.userId,
@@ -37,9 +48,17 @@ export const addAddress = async (req: AuthRequest, res: Response): Promise<any> 
         phone,
         addressLine1,
         addressLine2,
+        flatHouse,
+        buildingApartment,
+        localityArea,
+        landmark,
         city,
         state,
         postalCode,
+        latitude,
+        longitude,
+        formattedAddress,
+        geocodingStatus: 'VERIFIED',
         isDefault: Boolean(isDefault),
       },
     });

@@ -222,6 +222,7 @@ export const Navbar: React.FC = () => {
                       >
                         <Package className="w-4 h-4" /> My Orders & Timeline
                       </Link>
+
                       <Link
                         to="/wishlist"
                         onClick={() => setUserDropdownOpen(false)}

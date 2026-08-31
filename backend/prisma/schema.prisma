@@ -1,53 +1,46 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-
-
-
-
 generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id           String         @id @default(uuid())
-  name         String
-  email        String         @unique
-  phone        String?
-  passwordHash String
-  role         String         @default("CONSUMER") // FARMER, CONSUMER, ADMIN
-  avatar       String?
-  isActive     Boolean        @default(true)
-  isVerified   Boolean        @default(false)
-  isBulkBuyer  Boolean        @default(false)
-  companyName  String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
 
-  farmerProfile FarmerProfile?
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  phone         String?
+  passwordHash  String
+  role          String         @default("CONSUMER")
+  avatar        String?
+  isActive      Boolean        @default(true)
+  isVerified    Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   addresses     Address[]
-  orders        Order[]        @relation("CustomerOrders")
   cart          Cart?
+  farmerProfile FarmerProfile?
+  notifications Notification[]
+  orders        Order[]        @relation("CustomerOrders")
   reviews       Review[]
   wishlist      Wishlist[]
-  notifications Notification[]
-  rfqs          Rfq[]
+  driverProfile Driver?
 }
 
 model FarmerProfile {
   id                 String         @id @default(uuid())
   userId             String         @unique
-  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   farmName           String
   description        String?
-  farmSize           String?        // e.g. "15 Acres"
-  farmingType        String?        // e.g. "Organic", "Hydroponic", "Traditional", "Natural"
+  farmSize           String?
+  farmingType        String?
   experienceYears    Int?           @default(5)
-  location           String         // e.g. "Nashik, Maharashtra" (Legacy/Display)
-  addressLine1       String?        // Plot/Survey No
-  addressLine2       String?        // Building/Landmark
+  location           String
+  addressLine1       String?
+  addressLine2       String?
   villageLocality    String?
   streetLane         String?
   talukaTehsil       String?
@@ -58,28 +51,24 @@ model FarmerProfile {
   country            String?        @default("India")
   landmark           String?
   googleMapsLink     String?
-  locationAccuracy   String?        // VERIFIED, APPROXIMATE, NEEDS_ATTENTION
+  locationAccuracy   String?
   latitude           Float?
   longitude          Float?
-  verificationStatus String         @default("VERIFIED") // PENDING, VERIFIED, REJECTED, SUSPENDED
+  verificationStatus String         @default("VERIFIED")
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
-
-  products           Product[]
-  orderItems         OrderItem[]
-  reviews            Review[]
   payouts            FarmerPayout[]
-  rfqs               Rfq[]
-  vehicles           Vehicle[]
-  deliveryBatches    DeliveryBatch[]
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems         OrderItem[]
+  products           Product[]
+  reviews            Review[]
 }
 
 model Address {
-  id           String   @id @default(uuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name         String
-  phone        String
+  id                String   @id @default(uuid())
+  userId            String
+  name              String
+  phone             String
   addressLine1      String
   addressLine2      String?
   flatHouse         String?
@@ -96,7 +85,9 @@ model Address {
   longitude         Float?
   geocodingStatus   String?
   isDefault         Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  createdAt         DateTime @default(now())
+  formattedAddress  String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Category {
@@ -107,161 +98,166 @@ model Category {
   image       String?
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
-
   products    Product[]
 }
 
 model Product {
-  id                   String         @id @default(uuid())
-  farmerId             String
-  farmer               FarmerProfile  @relation(fields: [farmerId], references: [id], onDelete: Cascade)
-  categoryId           String
-  category             Category       @relation(fields: [categoryId], references: [id])
-  name                 String
-  slug                 String
-  description          String
-  price                Float          // Farm price per unit (e.g. ₹40/kg)
-  estimatedMarketPrice Float?         // Middleman/Retail market price for transparency comparison (e.g. ₹65/kg)
-  unit                 String         @default("KG") // KG, GRAM, LITRE, PIECE, DOZEN, QUINTAL
-  availableQuantity    Float          @default(0)
-  minimumOrderQuantity Float          @default(1)
-  bulkPricing          Json?          // Array of { minQty, maxQty, price }
-  organic              Boolean        @default(false)
-  harvestDate          DateTime?
-  image                String?
-  isActive             Boolean        @default(true)
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
-
-  images               ProductImage[]
-  cartItems            CartItem[]
-  orderItems           OrderItem[]
-  reviews              Review[]
-  wishlistItems        Wishlist[]
-  rfqs                 Rfq[]
+  id                              String         @id @default(uuid())
+  farmerId                        String
+  categoryId                      String
+  name                            String
+  slug                            String
+  description                     String
+  price                           Float
+  estimatedMarketPrice            Float?
+  unit                            String         @default("KG")
+  availableQuantity               Float          @default(0)
+  minimumOrderQuantity            Float          @default(1)
+  organic                         Boolean        @default(false)
+  harvestDate                     DateTime?
+  image                           String?
+  isActive                        Boolean        @default(true)
+  createdAt                       DateTime       @default(now())
+  updatedAt                       DateTime       @updatedAt
+  bulkMinimumQuantity             Float?
+  bulkPrice                       Float?
+  bulkPricingEnabled              Boolean        @default(false)
+  freshMarketEnabled              Boolean        @default(true)
+  reservedQuantity                Float          @default(0)
+  soldQuantity                    Float          @default(0)
+  isMarketPriceManuallyOverridden Boolean        @default(false)
+  marketPriceFetchedAt            DateTime?
+  marketPriceMarketName           String?
+  marketPriceSource               String?
+  cartItems                       CartItem[]
+  orderItems                      OrderItem[]
+  category                        Category       @relation(fields: [categoryId], references: [id])
+  farmer                          FarmerProfile  @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  images                          ProductImage[]
+  reviews                         Review[]
+  wishlistItems                   Wishlist[]
 }
 
 model ProductImage {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String
   altText   String?
-  sortOrder Int      @default(0)
+  sortOrder Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Cart {
   id        String     @id @default(uuid())
   userId    String     @unique
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
-
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     CartItem[]
 }
 
 model CartItem {
   id              String   @id @default(uuid())
   cartId          String
-  cart            Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
   productId       String
-  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity        Float    @default(1)
   priceAtAddition Float
   createdAt       DateTime @default(now())
+  purchaseType    String   @default("NORMAL")
+  cart            Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Order {
-  id                      String       @id @default(uuid())
-  orderNumber             String       @unique
+  id                      String         @id @default(uuid())
+  orderNumber             String         @unique
   customerId              String
-  customer                User         @relation("CustomerOrders", fields: [customerId], references: [id])
   subtotal                Float
-  deliveryFee             Float        @default(0)
-  platformFee             Float        @default(0)
-  discount                Float        @default(0)
+  deliveryFee             Float          @default(0)
+  platformFee             Float          @default(0)
+  discount                Float          @default(0)
   total                   Float
-  paymentStatus           String       @default("PENDING") // PENDING, SUCCESS, FAILED, REFUNDED
-  orderStatus             String       @default("CONFIRMED") // PENDING, CONFIRMED, ACCEPTED, PREPARING, READY_FOR_PICKUP, PICKED_UP, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, REJECTED
-  deliveryAddressSnapshot String       // JSON stringified address details
+  paymentStatus           String         @default("PENDING")
+  orderStatus             String         @default("CONFIRMED")
+  deliveryAddressSnapshot String
   notes                   String?
-  batchId                 String?
-  batch                   DeliveryBatch? @relation(fields: [batchId], references: [id])
-  createdAt               DateTime     @default(now())
-  updatedAt               DateTime     @updatedAt
-
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  delivery                Delivery?
+  payouts                 FarmerPayout[]
+  customer                User           @relation("CustomerOrders", fields: [customerId], references: [id])
   items                   OrderItem[]
   payment                 Payment?
-  delivery                Delivery?
   reviews                 Review[]
-  payouts                 FarmerPayout[]
+  logisticsJob            LogisticsJob?
 }
 
 model OrderItem {
-  id          String        @id @default(uuid())
-  orderId     String
-  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId   String
-  product     Product       @relation(fields: [productId], references: [id])
-  farmerId    String
-  farmer      FarmerProfile @relation(fields: [farmerId], references: [id])
-  productName String
-  unitPrice   Float
-  quantity    Float
-  unit        String        @default("KG")
-  subtotal    Float
-  status      String        @default("CONFIRMED") // CONFIRMED, ACCEPTED, PREPARING, READY, DELIVERED, CANCELLED
+  id           String        @id @default(uuid())
+  orderId      String
+  productId    String
+  farmerId     String
+  productName  String
+  unitPrice    Float
+  quantity     Float
+  unit         String        @default("KG")
+  subtotal     Float
+  status       String        @default("CONFIRMED")
+  purchaseType String        @default("NORMAL")
+  farmer       FarmerProfile @relation(fields: [farmerId], references: [id])
+  order        Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product       @relation(fields: [productId], references: [id])
 }
 
 model Payment {
   id            String    @id @default(uuid())
   orderId       String    @unique
-  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  provider      String    @default("RAZORPAY") // RAZORPAY, CASH_ON_DELIVERY, UPI
+  provider      String    @default("RAZORPAY")
   transactionId String?
   amount        Float
   currency      String    @default("INR")
-  status        String    @default("SUCCESS") // PENDING, SUCCESS, FAILED, REFUNDED
+  status        String    @default("SUCCESS")
   paidAt        DateTime? @default(now())
   createdAt     DateTime  @default(now())
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Delivery {
   id                String    @id @default(uuid())
   orderId           String    @unique
-  order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   deliveryPartner   String    @default("FarmDirect Express")
   trackingNumber    String
-  status            String    @default("IN_TRANSIT") // PENDING, ASSIGNED, PICKED_UP, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, FAILED
+  status            String    @default("IN_TRANSIT")
   estimatedDelivery DateTime?
   deliveredAt       DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Review {
   id        String        @id @default(uuid())
   userId    String
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String
-  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
   farmerId  String
-  farmer    FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
   orderId   String?
-  order     Order?        @relation(fields: [orderId], references: [id])
-  rating    Int           // 1 to 5
+  rating    Int
   comment   String
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+  farmer    FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  order     Order?        @relation(fields: [orderId], references: [id])
+  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Wishlist {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
 }
@@ -269,110 +265,138 @@ model Wishlist {
 model Notification {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   message   String
-  type      String   @default("ORDER") // ORDER, PAYMENT, ACCOUNT, SYSTEM, PAYOUT
+  type      String   @default("ORDER")
   link      String?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model FarmerPayout {
   id          String        @id @default(uuid())
   farmerId    String
-  farmer      FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
   orderId     String
-  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  amount      Float         // Gross item sales
-  platformFee Float         // Commission deducted (e.g. 5%)
-  netAmount   Float         // Farmer actual earnings (amount - platformFee)
-  status      String        @default("PAID") // PENDING, PROCESSED, PAID, FAILED
+  amount      Float
+  platformFee Float
+  netAmount   Float
+  status      String        @default("PAID")
   paidAt      DateTime?     @default(now())
   createdAt   DateTime      @default(now())
+  farmer      FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model DeliveryRoute {
   id                String              @id @default(uuid())
-  createdBy         String              // FarmerProfile ID
-  startLocation     String              // Text description
+  createdBy         String
+  startLocation     String
   startLatitude     Float?
   startLongitude    Float?
-  totalDistance     Float               // in km
-  estimatedDuration Float               // in minutes
-  status            String              @default("PLANNED") // PLANNED, IN_PROGRESS, COMPLETED
+  totalDistance     Float
+  estimatedDuration Float
+  status            String              @default("PLANNED")
   createdAt         DateTime            @default(now())
-  
   stops             DeliveryRouteStop[]
 }
 
 model DeliveryRouteStop {
   id        String        @id @default(uuid())
   routeId   String
-  route     DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
   orderId   String
   sequence  Int
   latitude  Float?
   longitude Float?
+  route     DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
 }
 
-model Rfq {
-  id               String        @id @default(uuid())
-  buyerId          String
-  buyer            User          @relation(fields: [buyerId], references: [id])
-  productId        String
-  product          Product       @relation(fields: [productId], references: [id])
-  farmerId         String
-  farmer           FarmerProfile @relation(fields: [farmerId], references: [id])
-  requiredQuantity Float
-  deliveryAddress  String
-  preferredDate    DateTime?
-  notes            String?
-  status           String        @default("PENDING") // PENDING, QUOTED, ACCEPTED, REJECTED
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  
-  quotation        Quotation?
-}
-
-model Quotation {
-  id               String   @id @default(uuid())
-  rfqId            String   @unique
-  rfq              Rfq      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  quotedPrice      Float
-  availableQuantity Float
-  deliveryCost     Float    @default(0)
-  validUntil       DateTime?
-  notes            String?
-  status           String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-}
+// ----------------------------------------------------------------------
+// SMART LOGISTICS MODULE
+// ----------------------------------------------------------------------
 
 model Vehicle {
-  id               String        @id @default(uuid())
-  farmerId         String
-  farmer           FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
-  name             String
-  capacityKg       Float
-  isActive         Boolean       @default(true)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-
-  batches          DeliveryBatch[]
+  id                 String           @id @default(uuid())
+  registrationNumber String           @unique
+  type               String           @default("MINI_TRUCK")
+  maxWeightCapacity  Float
+  maxVolumeCapacity  Float?
+  currentLoad        Float            @default(0)
+  status             String           @default("AVAILABLE") // AVAILABLE, ASSIGNED, ON_ROUTE, MAINTENANCE
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  drivers            Driver[]
+  logisticsJobs      LogisticsJob[]
+  routes             LogisticsRoute[]
 }
 
-model DeliveryBatch {
-  id               String        @id @default(uuid())
-  farmerId         String
-  farmer           FarmerProfile @relation(fields: [farmerId], references: [id], onDelete: Cascade)
-  vehicleId        String?
-  vehicle          Vehicle?      @relation(fields: [vehicleId], references: [id])
-  status           String        @default("CREATED") // CREATED, OPTIMIZED, OUT_FOR_DELIVERY, COMPLETED
-  totalLoadKg      Float         @default(0)
-  clusterName      String?       // Geographic grouping name e.g., "Mumbai West"
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+model Driver {
+  id               String           @id @default(uuid())
+  userId           String           @unique
+  assignedVehicleId String?
+  status           String           @default("AVAILABLE") // AVAILABLE, ON_PICKUP, ON_DELIVERY, OFFLINE
+  isVerified       Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle          Vehicle?         @relation(fields: [assignedVehicleId], references: [id])
+  logisticsJobs    LogisticsJob[]
+  routes           LogisticsRoute[]
+}
 
-  orders           Order[]
+model LogisticsJob {
+  id                 String          @id @default(uuid())
+  orderId            String          @unique
+  status             String          @default("AWAITING_LOGISTICS") // AWAITING_LOGISTICS, PLANNING, PICKUP_SCHEDULED, EN_ROUTE_TO_PICKUP, IN_TRANSIT, DELIVERED, CANCELLED
+  logisticsMode      String          @default("DIRECT") // DIRECT, CONSOLIDATED
+  vehicleId          String?
+  driverId           String?
+  routeId            String?
+  pickupLocation     String
+  deliveryLocation   String
+  expectedPickupTime DateTime?
+  actualPickupTime   DateTime?
+  expectedDeliveryTime DateTime?
+  actualDeliveryTime DateTime?
+  deliveryOtp        String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  order              Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vehicle            Vehicle?        @relation(fields: [vehicleId], references: [id])
+  driver             Driver?         @relation(fields: [driverId], references: [id])
+  route              LogisticsRoute? @relation(fields: [routeId], references: [id])
+}
+
+model LogisticsRoute {
+  id                String               @id @default(uuid())
+  vehicleId         String
+  driverId          String
+  totalDistance     Float
+  estimatedDuration Float
+  actualDuration    Float?
+  status            String               @default("PLANNED") // PLANNED, ACTIVE, COMPLETED
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  vehicle           Vehicle              @relation(fields: [vehicleId], references: [id])
+  driver            Driver               @relation(fields: [driverId], references: [id])
+  jobs              LogisticsJob[]
+  stops             LogisticsRouteStop[]
+}
+
+model LogisticsRouteStop {
+  id               String         @id @default(uuid())
+  routeId          String
+  sequence         Int
+  stopType         String         @default("PICKUP") // PICKUP, DELIVERY
+  location         String
+  latitude         Float?
+  longitude        Float?
+  status           String         @default("PENDING") // PENDING, ARRIVED, COMPLETED
+  expectedQuantity Float?
+  actualQuantity   Float?
+  estimatedArrival DateTime?
+  actualArrival    DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  route            LogisticsRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
 }

@@ -52,8 +52,27 @@ export const getCart = async (req: AuthRequest, res: Response): Promise<any> => 
     let subtotal = 0;
 
     const validatedItems = cart.items.map((item) => {
-      const isAvailable = item.product.isActive && item.product.availableQuantity >= item.quantity;
-      const itemSubtotal = item.quantity * item.product.price;
+      let activePrice = item.product.price;
+      
+      // Auto-upgrade to BULK_DEAL for display if it qualifies based on current product rules
+      let displayPurchaseType = item.purchaseType;
+      if (item.product.bulkPricingEnabled && item.product.bulkMinimumQuantity) {
+        if (item.quantity >= item.product.bulkMinimumQuantity) {
+          displayPurchaseType = 'BULK_DEAL';
+        } else {
+          displayPurchaseType = 'FRESH_MARKET';
+        }
+      }
+      
+      // Auto-apply bulk price if it's a bulk deal
+      if (displayPurchaseType === 'BULK_DEAL' && item.product.bulkPricingEnabled && item.product.bulkPrice) {
+        activePrice = item.product.bulkPrice;
+      }
+
+      const trueAvailable = item.product.availableQuantity - item.product.reservedQuantity;
+
+      const isAvailable = item.product.isActive && trueAvailable >= item.quantity;
+      const itemSubtotal = item.quantity * activePrice;
       subtotal += itemSubtotal;
 
       const farmerId = item.product.farmerId;
@@ -69,6 +88,8 @@ export const getCart = async (req: AuthRequest, res: Response): Promise<any> => 
 
       farmersMap[farmerId].items.push({
         ...item,
+        purchaseType: displayPurchaseType,
+        priceAtAddition: activePrice,
         isAvailable,
         itemSubtotal,
       });
@@ -76,6 +97,8 @@ export const getCart = async (req: AuthRequest, res: Response): Promise<any> => 
 
       return {
         ...item,
+        purchaseType: displayPurchaseType,
+        priceAtAddition: activePrice,
         isAvailable,
         itemSubtotal,
       };
@@ -104,7 +127,7 @@ export const getCart = async (req: AuthRequest, res: Response): Promise<any> => 
 export const addToCart = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     if (!req.user) return sendError(res, 'Unauthorized', 401);
-    const { productId, quantity } = req.body;
+    const { productId, quantity, purchaseType = 'FRESH_MARKET' } = req.body;
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
@@ -114,10 +137,12 @@ export const addToCart = async (req: AuthRequest, res: Response): Promise<any> =
       return sendError(res, 'Product is no longer available', 404, 'PRODUCT_UNAVAILABLE');
     }
 
-    if (product.availableQuantity < quantity) {
+    const trueAvailable = product.availableQuantity - product.reservedQuantity;
+
+    if (trueAvailable < quantity) {
       return sendError(
         res,
-        `Only ${product.availableQuantity} ${product.unit} available in stock`,
+        `Only ${trueAvailable} ${product.unit} available in stock`,
         400,
         'INSUFFICIENT_STOCK'
       );
@@ -137,15 +162,37 @@ export const addToCart = async (req: AuthRequest, res: Response): Promise<any> =
       where: {
         cartId: cart.id,
         productId,
+        purchaseType,
       },
     });
 
+    let activePrice = product.price;
+    if (purchaseType === 'BULK_DEAL') {
+      if (!product.bulkPricingEnabled) {
+        return sendError(res, 'Bulk Deals are not available for this product', 400);
+      }
+      if (product.bulkPrice) {
+        activePrice = product.bulkPrice;
+      }
+    } else if (purchaseType === 'FRESH_MARKET') {
+      if (!product.freshMarketEnabled) {
+        return sendError(res, 'Fresh Market is not available for this product', 400);
+      }
+    }
+
     if (existingItem) {
       const newQuantity = existingItem.quantity + quantity;
-      if (product.availableQuantity < newQuantity) {
+      
+      if (purchaseType === 'BULK_DEAL' && newQuantity < (product.bulkMinimumQuantity || 0)) {
+         return sendError(res, `Bulk Deals are available from ${product.bulkMinimumQuantity} ${product.unit}. Add more to qualify.`, 400);
+      }
+      if (purchaseType === 'FRESH_MARKET' && newQuantity < (product.minimumOrderQuantity || 1)) {
+         return sendError(res, `Fresh Market requires minimum ${product.minimumOrderQuantity} ${product.unit}.`, 400);
+      }
+      if (trueAvailable < newQuantity) {
         return sendError(
           res,
-          `Cannot add more. Total in cart would exceed stock (${product.availableQuantity} ${product.unit})`,
+          `Cannot add more. Total in cart would exceed stock (${trueAvailable} ${product.unit})`,
           400,
           'INSUFFICIENT_STOCK'
         );
@@ -155,16 +202,24 @@ export const addToCart = async (req: AuthRequest, res: Response): Promise<any> =
         where: { id: existingItem.id },
         data: {
           quantity: newQuantity,
-          priceAtAddition: product.price,
+          priceAtAddition: activePrice,
         },
       });
     } else {
+      if (purchaseType === 'BULK_DEAL' && quantity < (product.bulkMinimumQuantity || 0)) {
+         return sendError(res, `Bulk Deals are available from ${product.bulkMinimumQuantity} ${product.unit}. Add more to qualify.`, 400);
+      }
+      if (purchaseType === 'FRESH_MARKET' && quantity < (product.minimumOrderQuantity || 1)) {
+         return sendError(res, `Fresh Market requires minimum ${product.minimumOrderQuantity} ${product.unit}.`, 400);
+      }
+
       await prisma.cartItem.create({
         data: {
           cartId: cart.id,
           productId,
           quantity,
-          priceAtAddition: product.price,
+          priceAtAddition: activePrice,
+          purchaseType,
         },
       });
     }
@@ -195,18 +250,43 @@ export const updateCartItem = async (req: AuthRequest, res: Response): Promise<a
       return getCart(req, res);
     }
 
-    if (cartItem.product.availableQuantity < quantity) {
+    const trueAvailable = cartItem.product.availableQuantity - cartItem.product.reservedQuantity;
+
+    if (trueAvailable < quantity) {
       return sendError(
         res,
-        `Only ${cartItem.product.availableQuantity} ${cartItem.product.unit} available in stock`,
+        `Only ${trueAvailable} ${cartItem.product.unit} available in stock`,
         400,
         'INSUFFICIENT_STOCK'
       );
     }
 
+    // Auto-convert purchase type based on quantity if bulk pricing is enabled
+    let updatedPurchaseType = cartItem.purchaseType;
+    if (cartItem.product.bulkPricingEnabled && cartItem.product.bulkMinimumQuantity) {
+      if (quantity >= cartItem.product.bulkMinimumQuantity) {
+        updatedPurchaseType = 'BULK_DEAL';
+      } else {
+        updatedPurchaseType = 'FRESH_MARKET';
+      }
+    }
+
+    if (updatedPurchaseType === 'FRESH_MARKET' && quantity < (cartItem.product.minimumOrderQuantity || 1)) {
+      return sendError(res, `Fresh Market requires minimum ${cartItem.product.minimumOrderQuantity} ${cartItem.product.unit}.`, 400);
+    }
+
+    let activePrice = cartItem.product.price;
+    if (updatedPurchaseType === 'BULK_DEAL' && cartItem.product.bulkPricingEnabled && cartItem.product.bulkPrice) {
+      activePrice = cartItem.product.bulkPrice;
+    }
+
     await prisma.cartItem.update({
       where: { id },
-      data: { quantity },
+      data: { 
+        quantity, 
+        priceAtAddition: activePrice,
+        purchaseType: updatedPurchaseType
+      },
     });
 
     return getCart(req, res);

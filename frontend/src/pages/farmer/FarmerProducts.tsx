@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2, Sparkles, Layers, Image as ImageIcon } from 'lucide-react';
-import { farmerApi, productApi, categoryApi } from '../../services/api';
+import { farmerApi, productApi, categoryApi, uploadApi } from '../../services/api';
 import { Product, Category } from '../../types';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Button } from '../../components/common/Button';
@@ -28,11 +28,18 @@ export const FarmerProducts: React.FC = () => {
     minimumOrderQuantity: '1',
     organic: true,
     image: '',
+    freshMarketEnabled: true,
     bulkPricingEnabled: false,
-    bulkMinQty: '20',
+    bulkMinimumQuantity: '',
     bulkPrice: '',
   });
   const [saving, setSaving] = useState(false);
+
+  // Image Upload State
+  const [imageTab, setImageTab] = useState<'upload' | 'url'>('upload');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imageError, setImageError] = useState<string>('');
 
   const fetchProducts = async () => {
     try {
@@ -71,10 +78,15 @@ export const FarmerProducts: React.FC = () => {
       minimumOrderQuantity: '1',
       organic: true,
       image: '',
+      freshMarketEnabled: true,
       bulkPricingEnabled: false,
-      bulkMinQty: '20',
+      bulkMinimumQuantity: '',
       bulkPrice: '',
     });
+    setImageTab('upload');
+    setImageFile(null);
+    setImagePreview('');
+    setImageError('');
     setIsModalOpen(true);
   };
 
@@ -91,10 +103,15 @@ export const FarmerProducts: React.FC = () => {
       minimumOrderQuantity: product.minimumOrderQuantity.toString(),
       organic: product.organic,
       image: product.image || '',
-      bulkPricingEnabled: !!product.bulkPricing,
-      bulkMinQty: product.bulkPricing ? (product.bulkPricing as any)[0]?.minQty.toString() : '20',
-      bulkPrice: product.bulkPricing ? (product.bulkPricing as any)[0]?.price.toString() : '',
+      freshMarketEnabled: product.freshMarketEnabled ?? true,
+      bulkPricingEnabled: product.bulkPricingEnabled || false,
+      bulkMinimumQuantity: product.bulkMinimumQuantity ? product.bulkMinimumQuantity.toString() : '',
+      bulkPrice: product.bulkPrice ? product.bulkPrice.toString() : '',
     });
+    setImageTab(product.image ? 'url' : 'upload');
+    setImageFile(null);
+    setImagePreview(product.image || '');
+    setImageError('');
     setIsModalOpen(true);
   };
 
@@ -113,8 +130,40 @@ export const FarmerProducts: React.FC = () => {
         minimumOrderQuantity: parseFloat(form.minimumOrderQuantity),
         organic: form.organic,
         image: form.image,
-        bulkPricing: form.bulkPricingEnabled && form.bulkPrice ? [{ minQty: parseFloat(form.bulkMinQty), maxQty: null, price: parseFloat(form.bulkPrice) }] : null
+        freshMarketEnabled: form.freshMarketEnabled,
+        bulkPricingEnabled: form.bulkPricingEnabled,
+        bulkMinimumQuantity: form.bulkMinimumQuantity ? parseFloat(form.bulkMinimumQuantity) : undefined,
+        bulkPrice: form.bulkPrice ? parseFloat(form.bulkPrice) : undefined,
       };
+
+      if (!form.freshMarketEnabled && !form.bulkPricingEnabled) {
+        alert('You must enable at least one marketplace (Fresh Market or Bulk Deals).');
+        setSaving(false);
+        return;
+      }
+
+      if (imageError) {
+        alert('Please provide a valid image.');
+        setSaving(false);
+        return;
+      }
+
+      if (imageTab === 'upload' && imagePreview && imagePreview.startsWith('data:image')) {
+        try {
+          const uploadedUrl = await uploadApi.uploadImage(imagePreview);
+          productData.image = uploadedUrl;
+        } catch (err: any) {
+          alert('Failed to upload image. Please try again.');
+          setSaving(false);
+          return;
+        }
+      }
+
+      if (form.bulkPricingEnabled && parseFloat(form.bulkPrice) >= parseFloat(form.price)) {
+        alert('Bulk price should normally be lower than the regular consumer price.');
+        setSaving(false);
+        return;
+      }
 
       if (editingProduct) {
         await productApi.updateProduct(editingProduct.id, productData);
@@ -138,6 +187,40 @@ export const FarmerProducts: React.FC = () => {
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to delete product');
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+      setImageError('');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setForm({ ...form, image: url });
+    if (!url) {
+      setImagePreview('');
+      setImageError('');
+      return;
+    }
+    
+    // Validate image URL by preloading
+    const img = new Image();
+    img.src = url;
+    img.onload = () => {
+      setImagePreview(url);
+      setImageError('');
+    };
+    img.onerror = () => {
+      setImageError('Unable to load this image. Please use:\n• A direct image URL\n• An Unsplash image URL\n• Or upload an image from your device');
+      setImagePreview('');
+    };
   };
 
   if (loading) return <Loader fullPage message="Loading your farm inventory..." />;
@@ -179,6 +262,7 @@ export const FarmerProducts: React.FC = () => {
                           }
                           alt={p.name}
                           className="w-12 h-12 rounded-xl object-cover border border-slate-100"
+                          onError={(e) => { e.currentTarget.src = 'https://placehold.co/100x100/f8fafc/94a3b8?text=Image+Unavailable'; }}
                         />
                         <div>
                           <p className="font-bold text-slate-900">{p.name}</p>
@@ -197,17 +281,24 @@ export const FarmerProducts: React.FC = () => {
                     </td>
 
                     <td className="py-4 px-4">
-                      <span
-                        className={`font-bold px-2 py-0.5 rounded-lg text-xs ${
-                          p.availableQuantity > 20
-                            ? 'bg-emerald-50 text-emerald-800'
-                            : p.availableQuantity > 0
-                            ? 'bg-amber-50 text-amber-800'
-                            : 'bg-red-50 text-red-800'
-                        }`}
-                      >
-                        {p.availableQuantity} {p.unit}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={`font-bold px-2 py-0.5 rounded-lg text-xs w-max ${
+                            p.availableQuantity > 20
+                              ? 'bg-emerald-50 text-emerald-800'
+                              : p.availableQuantity > 0
+                              ? 'bg-amber-50 text-amber-800'
+                              : 'bg-red-50 text-red-800'
+                          }`}
+                        >
+                          Stock: {p.availableQuantity} {p.unit}
+                        </span>
+                        {p.reservedQuantity ? (
+                          <span className="text-[10px] text-amber-600 font-bold">
+                            Reserved: {p.reservedQuantity} {p.unit}
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
 
                     <td className="py-4 px-4">
@@ -332,12 +423,81 @@ export const FarmerProducts: React.FC = () => {
               onChange={(e) => setForm({ ...form, availableQuantity: e.target.value })}
               placeholder="e.g. 250"
             />
-            <Input
-              label="Image URL (Unsplash/Direct)"
-              value={form.image}
-              onChange={(e) => setForm({ ...form, image: e.target.value })}
-              placeholder="https://images.unsplash.com/..."
-            />
+          </div>
+
+          {/* Image Upload/URL Section */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-3">
+              Produce Image
+            </label>
+            
+            <div className="flex bg-white rounded-lg p-1 border border-slate-200 mb-4 w-max">
+              <button
+                type="button"
+                onClick={() => setImageTab('upload')}
+                className={`px-4 py-1.5 rounded-md text-xs font-bold transition ${imageTab === 'upload' ? 'bg-brand-50 text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Upload Image
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageTab('url')}
+                className={`px-4 py-1.5 rounded-md text-xs font-bold transition ${imageTab === 'url' ? 'bg-brand-50 text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Use Image URL
+              </button>
+            </div>
+
+            {imageTab === 'upload' ? (
+              <div className="mb-4">
+                <input
+                  type="file"
+                  accept="image/jpeg, image/png, image/webp"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 transition"
+                />
+              </div>
+            ) : (
+              <div className="mb-4">
+                <Input
+                  label=""
+                  value={form.image}
+                  onChange={handleUrlChange}
+                  placeholder="https://example.com/image.jpg"
+                  helperText="Paste a direct image link. Google search/page URLs cannot be used as product image URLs."
+                />
+              </div>
+            )}
+
+            {imageError && (
+              <div className="mb-4 p-3 bg-red-50 text-red-600 text-xs font-semibold rounded-xl border border-red-100 whitespace-pre-line">
+                {imageError}
+              </div>
+            )}
+
+            {imagePreview && (
+              <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm mt-2">
+                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImagePreview('');
+                    setImageFile(null);
+                    setForm({ ...form, image: '' });
+                  }}
+                  className="absolute top-1 right-1 bg-white/80 p-1 rounded-md text-slate-600 hover:text-red-600"
+                  title="Remove Image"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            {!imagePreview && !imageError && (
+              <div className="w-32 h-32 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 mt-2 bg-white">
+                <ImageIcon className="w-8 h-8 mb-1 opacity-50" />
+                <span className="text-[10px] font-bold">IMAGE PREVIEW</span>
+              </div>
+            )}
           </div>
 
           <div>
@@ -364,53 +524,52 @@ export const FarmerProducts: React.FC = () => {
             <span>100% Certified Organic / Chemical-free produce</span>
           </label>
 
-          <div className="pt-4 border-t border-slate-100">
-            <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
+          <div className="pt-4 border-t border-slate-100 space-y-4">
+            <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.freshMarketEnabled}
+                onChange={(e) => setForm({ ...form, freshMarketEnabled: e.target.checked })}
+                className="rounded text-brand-600 focus:ring-brand-500 accent-brand-600"
+              />
+              <span>Enable Fresh Market (Regular Consumer Sales)</span>
+            </label>
+
+            <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.bulkPricingEnabled}
                 onChange={(e) => setForm({ ...form, bulkPricingEnabled: e.target.checked })}
-                className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                className="rounded text-brand-600 focus:ring-brand-500 accent-brand-600"
               />
-              <div>
-                <span className="font-bold text-slate-900 block text-sm">Enable Bulk/B2B Pricing</span>
-                <span className="text-xs text-slate-500 block">Offer a discount for large quantity orders.</span>
-              </div>
+              <span>Enable Bulk/B2B Deals</span>
             </label>
 
             {form.bulkPricingEnabled && (
-              <div className="mt-4 grid grid-cols-2 gap-4 bg-brand-50 p-4 rounded-xl border border-brand-100">
-                <div>
-                  <label className="block text-xs font-bold text-brand-900 mb-1">
-                    Minimum Qty ({form.unit})
-                  </label>
-                  <input
-                    type="number"
-                    required={form.bulkPricingEnabled}
-                    min="2"
-                    value={form.bulkMinQty}
-                    onChange={(e) => setForm({ ...form, bulkMinQty: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-brand-900 mb-1">
-                    Bulk Price (₹ per {form.unit})
-                  </label>
-                  <input
-                    type="number"
-                    required={form.bulkPricingEnabled}
-                    min="1"
-                    value={form.bulkPrice}
-                    onChange={(e) => setForm({ ...form, bulkPrice: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-6 border-l-2 border-brand-200">
+                <Input
+                  label={`Minimum Qty (${form.unit})`}
+                  type="number"
+                  required
+                  min="1"
+                  step="any"
+                  value={form.bulkMinimumQuantity}
+                  onChange={(e) => setForm({ ...form, bulkMinimumQuantity: e.target.value })}
+                  placeholder="e.g. 300"
+                />
+                <Input
+                  label="Bulk Price (₹ per unit)"
+                  type="number"
+                  required
+                  min="1"
+                  step="any"
+                  value={form.bulkPrice}
+                  onChange={(e) => setForm({ ...form, bulkPrice: e.target.value })}
+                  placeholder="e.g. 35"
+                />
               </div>
             )}
-          </div>
-
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+          </div>          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
             <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>

@@ -90,11 +90,17 @@ export interface Product {
   farmerSharePercentage?: number;
   unit: string;
   availableQuantity: number;
+  reservedQuantity?: number;
+  soldQuantity?: number;
   minimumOrderQuantity: number;
   organic: boolean;
   harvestDate?: string;
   image?: string;
   isActive: boolean;
+  freshMarketEnabled?: boolean;
+  bulkPricingEnabled?: boolean;
+  bulkMinimumQuantity?: number;
+  bulkPrice?: number;
   category?: Category;
   farmer?: FarmerProfile;
   reviewsCount?: number;
@@ -102,7 +108,7 @@ export interface Product {
   avgRating?: number;
   reviews?: Review[];
   relatedProducts?: Product[];
-  bulkPricing?: any;
+
 }
 
 export interface CartItem {
@@ -112,6 +118,7 @@ export interface CartItem {
   product: Product;
   quantity: number;
   priceAtAddition: number;
+  purchaseType?: string;
   isAvailable?: boolean;
   itemSubtotal?: number;
 }
@@ -145,6 +152,7 @@ export interface OrderItem {
   unitPrice: number;
   quantity: number;
   unit: string;
+  purchaseType?: string;
   subtotal: number;
   status: string;
   product?: {
@@ -197,6 +205,7 @@ export interface Order {
     deliveredAt?: string;
   };
   reviews?: Review[];
+  logisticsJob?: any;
 }
 
 export interface Review {

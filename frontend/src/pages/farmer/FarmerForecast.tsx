@@ -68,15 +68,17 @@ export const FarmerForecast: React.FC = () => {
              </div>
            </div>
            
-           <select 
-             value={period}
-             onChange={(e) => setPeriod(Number(e.target.value))}
-             className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-brand-500"
-           >
-             <option value={7}>Next 7 Days</option>
-             <option value={14}>Next 14 Days</option>
-             <option value={30}>Next 30 Days</option>
-           </select>
+           <div className="flex items-center gap-4">
+             <select 
+               value={period}
+               onChange={(e) => setPeriod(Number(e.target.value))}
+               className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-brand-500"
+             >
+               <option value={7}>Next 7 Days</option>
+               <option value={14}>Next 14 Days</option>
+               <option value={30}>Next 30 Days</option>
+             </select>
+           </div>
         </div>
 
         {noData && !loading && (

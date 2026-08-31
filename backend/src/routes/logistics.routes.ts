@@ -1,19 +1,26 @@
-import { Router } from 'express';
+import express from 'express';
 import { authenticate } from '../middleware/auth.middleware';
-import { getReadyOrders, createDeliveryBatch, suggestClusters, getLogisticsInsights } from '../controllers/logistics.controller';
+import { 
+  getLogisticsJobs, 
+  getVehicles, 
+  getDrivers, 
+  verifyDriver,
+  assignLogisticsJob,
+  verifyPickup,
+  completeDelivery
+} from '../controllers/logistics.controller';
 
-const router = Router();
+const router = express.Router();
 
-// Get orders ready for delivery for the logged-in farmer
-router.get('/ready', authenticate, getReadyOrders);
+router.use(authenticate);
 
-// AI suggestion for clustering
-router.post('/clusters/suggest', authenticate, suggestClusters);
+router.get('/jobs', getLogisticsJobs);
+router.put('/jobs/:id/assign', assignLogisticsJob);
+router.post('/jobs/:id/verify-pickup', verifyPickup);
+router.post('/jobs/:id/complete-delivery', completeDelivery);
 
-// Create a delivery batch (assign orders to a vehicle/cluster)
-router.post('/batches', authenticate, createDeliveryBatch);
-
-// Get dynamic logistics insights
-router.get('/insights', authenticate, getLogisticsInsights);
+router.get('/vehicles', getVehicles);
+router.get('/drivers', getDrivers);
+router.put('/drivers/:id/verify', verifyDriver);
 
 export default router;

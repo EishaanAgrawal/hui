@@ -16,12 +16,15 @@ import {
   Menu,
   X,
   TrendingUp,
+  Truck,
+  Navigation,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  portalType: 'FARMER' | 'ADMIN';
+  portalType: 'FARMER' | 'ADMIN' | 'DRIVER';
   title?: string;
   subtitle?: string;
   actionButton?: React.ReactNode;
@@ -44,8 +47,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     { label: 'My Products', path: '/farmer/products', icon: Layers },
     { label: 'Inventory Control', path: '/farmer/inventory', icon: Package },
     { label: 'Fulfillment Orders', path: '/farmer/orders', icon: Package },
-    { label: 'B2B RFQs', path: '/farmer/rfqs', icon: Tractor },
-    { label: 'Smart Logistics', path: '/farmer/logistics', icon: Tractor },
     { label: 'Earnings & Payouts', path: '/farmer/earnings', icon: IndianRupee },
     { label: 'Reviews & Ratings', path: '/farmer/reviews', icon: Star },
     { label: 'Farm Profile', path: '/farmer/profile', icon: Settings },
@@ -58,9 +59,21 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     { label: 'Users Directory', path: '/admin/users', icon: Users },
     { label: 'Platform Orders', path: '/admin/orders', icon: Package },
     { label: 'Categories Manager', path: '/admin/categories', icon: FolderTree },
+    { label: 'Logistics Fleet', path: '/admin/logistics', icon: Truck },
   ];
 
-  const navItems = portalType === 'FARMER' ? farmerNavItems : adminNavItems;
+  const driverNavItems = [
+    { label: 'Active Route', path: '/driver/dashboard', icon: Navigation },
+    { label: 'Completed Jobs', path: '/driver/history', icon: CheckCircle2 },
+    { label: 'Driver Profile', path: '/driver/profile', icon: Settings },
+  ];
+
+  const navItems = portalType === 'FARMER' 
+      ? farmerNavItems 
+      : portalType === 'ADMIN' 
+        ? adminNavItems 
+        : driverNavItems;
+
   const isFarmer = portalType === 'FARMER';
 
   const renderNavLinks = () => (
@@ -106,7 +119,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     isFarmer ? 'text-brand-400' : 'text-indigo-400'
                   }`}
                 >
-                  {isFarmer ? 'Farmer Portal' : 'Admin Console'}
+                  {isFarmer ? 'Farmer Portal' : portalType === 'ADMIN' ? 'Admin Console' : 'Driver Terminal'}
                 </span>
               </div>
             </Link>

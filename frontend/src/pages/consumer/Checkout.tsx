@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   ArrowRight,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
@@ -29,6 +30,8 @@ export const Checkout: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+
+
 
   // Address Modal State
   const [newAddressModal, setNewAddressModal] = useState(false);
@@ -89,6 +92,21 @@ export const Checkout: React.FC = () => {
       setNewAddressModal(false);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to add address');
+    }
+  };
+
+  const handleDeleteAddress = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to remove this address?')) return;
+    try {
+      await userApi.deleteAddress(id);
+      setAddresses((prev) => prev.filter((a) => a.id !== id));
+      if (selectedAddressId === id) {
+        setSelectedAddressId('');
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete address');
     }
   };
 
@@ -190,7 +208,7 @@ export const Checkout: React.FC = () => {
                       onChange={() => setSelectedAddressId(addr.id)}
                       className="mt-1 text-brand-600 focus:ring-brand-500"
                     />
-                    <div className="text-xs space-y-1">
+                    <div className="text-xs space-y-1 flex-1">
                       <p className="font-bold text-slate-900">{addr.name}</p>
                       <p className="text-slate-600">{addr.addressLine1}</p>
                       {addr.addressLine2 && <p className="text-slate-500">{addr.addressLine2}</p>}
@@ -199,6 +217,14 @@ export const Checkout: React.FC = () => {
                       </p>
                       <p className="text-slate-500 font-medium">📞 {addr.phone}</p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteAddress(e, addr.id)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-auto"
+                      title="Delete Address"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </label>
                 ))}
               </div>
@@ -282,6 +308,8 @@ export const Checkout: React.FC = () => {
               </label>
             </div>
 
+
+
             {/* Delivery Instructions */}
             <div className="pt-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
@@ -308,13 +336,16 @@ export const Checkout: React.FC = () => {
             {cart.items.map((item) => (
               <div key={item.id} className="flex items-center justify-between text-xs pt-2 first:pt-0">
                 <div className="truncate pr-2">
-                  <p className="font-bold text-slate-900 truncate">{item.product.name}</p>
+                  <p className="font-bold text-slate-900 truncate flex items-center gap-1.5">
+                    {item.product.name}
+                    {item.purchaseType === 'BULK_DEAL' && <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">Bulk Deal</span>}
+                  </p>
                   <p className="text-slate-400">
-                    {item.quantity} {item.product.unit} × ₹{item.product.price}
+                    {item.quantity} {item.product.unit} × ₹{item.priceAtAddition}
                   </p>
                 </div>
                 <span className="font-bold text-slate-900 flex-shrink-0">
-                  ₹{item.quantity * item.product.price}
+                  ₹{item.quantity * item.priceAtAddition}
                 </span>
               </div>
             ))}

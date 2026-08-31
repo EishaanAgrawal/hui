@@ -15,28 +15,34 @@ import { Badge } from '../common/Badge';
 
 interface ProductCardProps {
   product: Product;
+  marketContext?: string;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product, marketContext = 'fresh' }) => {
   const { cart, addToCart, updateQuantity } = useCart();
 
   if (!product) return null;
 
-  // Find if this item is in the cart
-  const cartItem = cart?.items?.find((item) => item?.productId === product?.id);
+  const isBulk = marketContext === 'bulk' && product.bulkPricingEnabled;
+  const price = isBulk ? (product.bulkPrice || product.price) : product.price;
+  const activeMinQty = isBulk ? (product.bulkMinimumQuantity || 1) : (product.minimumOrderQuantity || 1);
+  const purchaseType = isBulk ? 'BULK_DEAL' : 'FRESH_MARKET';
+  
+  // Find if this item is in the cart with the SAME purchaseType
+  const cartItem = cart?.items?.find((item) => item?.productId === product?.id && item?.purchaseType === purchaseType);
   const inCartQty = cartItem ? cartItem.quantity : 0;
 
-  const price = typeof product.price === 'number' ? product.price : (Number(product.price) || 0);
+  const numericPrice = typeof price === 'number' ? price : (Number(price) || 0);
   const estimatedMarketPrice =
     typeof product.estimatedMarketPrice === 'number'
       ? product.estimatedMarketPrice
-      : Math.round(price * 1.45);
-  const savings = Math.max(0, estimatedMarketPrice - price);
+      : Math.round(numericPrice * 1.45);
+  const savings = Math.max(0, estimatedMarketPrice - numericPrice);
   const savingsPercent = estimatedMarketPrice > 0 ? Math.round((savings / estimatedMarketPrice) * 100) : 0;
 
-  const availableQty = typeof product.availableQuantity === 'number' ? product.availableQuantity : (Number(product.availableQuantity) || 0);
+  const availableQty = (typeof product.availableQuantity === 'number' ? product.availableQuantity : (Number(product.availableQuantity) || 0)) - (typeof product.reservedQuantity === 'number' ? product.reservedQuantity : 0);
   const isLowStock = availableQty <= 15 && availableQty > 0;
-  const isOutOfStock = availableQty === 0;
+  const isOutOfStock = availableQty < activeMinQty;
 
   const farmerId = product.farmer && typeof product.farmer === 'object' ? product.farmer.id : (product.farmerId || '');
   const farmName = product.farmer && typeof product.farmer === 'object' ? (product.farmer.farmName || 'Verified Farm') : 'Verified Farm';
@@ -54,6 +60,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             alt={product.name || 'Farm Produce'}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
+            onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f8fafc/94a3b8?text=Product+Image+Unavailable'; }}
           />
         </Link>
 
@@ -109,7 +116,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </Link>
 
           <span className="text-xs text-slate-400 font-medium block mt-0.5">
-            Unit: 1 {product.unit || 'KG'}
+            Unit: 1 {product.unit || 'KG'} {isBulk && <span className="text-amber-600 font-bold ml-1">(Min {activeMinQty} {product.unit})</span>}
           </span>
         </div>
 
@@ -118,7 +125,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg sm:text-xl font-black text-slate-900">
-                ₹{price}
+                ₹{numericPrice}
               </span>
               <span className="text-xs text-slate-400 line-through font-semibold">
                 ₹{estimatedMarketPrice}
@@ -165,11 +172,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </div>
           ) : (
             <button
-              onClick={() => addToCart(product.id, 1)}
+              onClick={() => addToCart(product.id, activeMinQty, purchaseType)}
               className="px-4 py-2 rounded-xl bg-brand-50 hover:bg-brand-600 text-brand-700 hover:text-white font-black text-xs border border-brand-200 hover:border-brand-600 transition-all duration-200 shadow-sm flex items-center gap-1 group/btn active:scale-95"
             >
               <Plus className="w-3.5 h-3.5 group-hover/btn:rotate-90 transition-transform duration-200" />
-              <span>ADD</span>
+              <span>ADD {activeMinQty > 1 ? `${activeMinQty} ${product.unit}` : ''}</span>
             </button>
           )}
 

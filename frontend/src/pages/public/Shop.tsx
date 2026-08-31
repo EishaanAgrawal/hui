@@ -20,6 +20,7 @@ export const Shop: React.FC = () => {
   const organicParam = searchParams.get('organic') === 'true';
   const sortParam = searchParams.get('sort') || 'newest';
   const pageParam = parseInt(searchParams.get('page') || '1', 10);
+  const marketParam = searchParams.get('market') || 'fresh';
 
   useEffect(() => {
     categoryApi
@@ -39,6 +40,7 @@ export const Shop: React.FC = () => {
           category: categoryParam,
           search: searchParam,
           organic: organicParam ? 'true' : '',
+          market: marketParam,
           sort: sortParam,
           page: pageParam,
           limit: 12,
@@ -56,7 +58,7 @@ export const Shop: React.FC = () => {
       }
     };
     fetchProducts();
-  }, [categoryParam, searchParam, organicParam, sortParam, pageParam]);
+  }, [categoryParam, searchParam, organicParam, sortParam, pageParam, marketParam]);
 
   const updateParam = (key: string, value: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -75,6 +77,32 @@ export const Shop: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      {/* Marketplace Switcher */}
+      <div className="flex flex-wrap items-center justify-center mb-8 gap-4">
+        <button
+          onClick={() => updateParam('market', 'fresh')}
+          className={`flex items-center px-6 py-3 rounded-full font-bold transition-all shadow-sm ${
+            marketParam === 'fresh'
+              ? 'bg-emerald-600 text-white ring-4 ring-emerald-100 scale-105'
+              : 'bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-50'
+          }`}
+        >
+          <span className="mr-2 text-xl">🛒</span>
+          Fresh Market
+        </button>
+        <button
+          onClick={() => updateParam('market', 'bulk')}
+          className={`flex items-center px-6 py-3 rounded-full font-bold transition-all shadow-sm ${
+            marketParam === 'bulk'
+              ? 'bg-amber-600 text-white ring-4 ring-amber-100 scale-105'
+              : 'bg-white text-amber-900 border border-amber-200 hover:bg-amber-50'
+          }`}
+        >
+          <span className="mr-2 text-xl">📦</span>
+          Bulk Deals
+        </button>
+      </div>
+
       {/* Top Banner */}
       <div className="bg-emerald-950 text-white rounded-3xl p-6 sm:p-10 mb-10 overflow-hidden relative shadow-lg">
         <div className="relative z-10 max-w-2xl">
@@ -128,7 +156,7 @@ export const Shop: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {(Array.isArray(products) ? products : []).map((product) => (
-                  <ProductCard key={product?.id || Math.random()} product={product} />
+                  <ProductCard key={product?.id || Math.random()} product={product} marketContext={marketParam} />
                 ))}
               </div>
 
