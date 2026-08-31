@@ -627,6 +627,111 @@ async function main() {
     },
   });
 
+  // Create additional pending orders for Logistics Demo
+  const pendingOrder1 = await prisma.order.create({
+    data: {
+      orderNumber: 'FD-20260828-2001',
+      customerId: consumers[2].id,
+      subtotal: 250,
+      deliveryFee: 40,
+      platformFee: 10,
+      discount: 0,
+      total: 300,
+      paymentStatus: 'SUCCESS',
+      orderStatus: 'CONFIRMED',
+      deliveryAddressSnapshot: JSON.stringify(consumers[2].addresses[0]),
+      notes: 'Call before arriving',
+      createdAt: new Date(),
+      items: {
+        create: [
+          {
+            productId: createdProducts[3].id,
+            farmerId: createdProducts[3].farmerId,
+            productName: createdProducts[3].name,
+            unitPrice: createdProducts[3].price,
+            quantity: 5,
+            unit: createdProducts[3].unit,
+            subtotal: createdProducts[3].price * 5,
+            status: 'PENDING',
+          }
+        ]
+      },
+      payment: {
+        create: {
+          provider: 'RAZORPAY',
+          transactionId: 'pay_demo_pending_tx1',
+          amount: 300,
+          currency: 'INR',
+          status: 'SUCCESS',
+          paidAt: new Date(),
+        }
+      }
+    }
+  });
+
+  const pendingOrder2 = await prisma.order.create({
+    data: {
+      orderNumber: 'FD-20260828-2002',
+      customerId: consumers[3].id,
+      subtotal: 120,
+      deliveryFee: 20,
+      platformFee: 5,
+      discount: 0,
+      total: 145,
+      paymentStatus: 'SUCCESS',
+      orderStatus: 'CONFIRMED',
+      deliveryAddressSnapshot: JSON.stringify(consumers[3].addresses[0]),
+      createdAt: new Date(),
+      items: {
+        create: [
+          {
+            productId: createdProducts[5].id,
+            farmerId: createdProducts[5].farmerId,
+            productName: createdProducts[5].name,
+            unitPrice: createdProducts[5].price,
+            quantity: 2,
+            unit: createdProducts[5].unit,
+            subtotal: createdProducts[5].price * 2,
+            status: 'PENDING',
+          }
+        ]
+      },
+      payment: {
+        create: {
+          provider: 'RAZORPAY',
+          transactionId: 'pay_demo_pending_tx2',
+          amount: 145,
+          currency: 'INR',
+          status: 'SUCCESS',
+          paidAt: new Date(),
+        }
+      }
+    }
+  });
+
+  // Create Logistics Jobs for these orders
+  await prisma.logisticsJob.create({
+    data: {
+      orderId: pendingOrder1.id,
+      pickupLocation: farmers[2].location,
+      deliveryLocation: consumers[2].addresses[0].city + ', ' + consumers[2].addresses[0].state,
+      status: 'AWAITING_LOGISTICS',
+      distance: 12.5,
+      estimatedTime: 45
+    }
+  });
+
+  await prisma.logisticsJob.create({
+    data: {
+      orderId: pendingOrder2.id,
+      pickupLocation: farmers[3].location,
+      deliveryLocation: consumers[3].addresses[0].city + ', ' + consumers[3].addresses[0].state,
+      status: 'AWAITING_LOGISTICS',
+      distance: 8.2,
+      estimatedTime: 30
+    }
+  });
+
   // Sample Reviews
   const reviewsSeed = [
     {
