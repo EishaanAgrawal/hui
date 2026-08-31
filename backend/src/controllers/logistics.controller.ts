@@ -12,7 +12,7 @@ export const getLogisticsJobs = async (req: AuthRequest, res: Response): Promise
     let whereClause = {};
 
     if (req.user.role === 'DRIVER') {
-      const driver = await prisma.driver.findUnique({ where: { userId: req.user.id } });
+      const driver = await prisma.driver.findUnique({ where: { userId: req.user.userId } });
       if (!driver) return sendError(res, 'Driver profile not found', 404);
       whereClause = { driverId: driver.id };
     }
