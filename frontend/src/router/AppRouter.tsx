@@ -14,6 +14,7 @@ import { About } from '../pages/public/About';
 import { HowItWorks } from '../pages/public/HowItWorks';
 import { Login } from '../pages/public/Login';
 import { Register } from '../pages/public/Register';
+import { DriverLogin } from '../pages/driver/DriverLogin';
 
 // Consumer Pages
 import { Cart } from '../pages/consumer/Cart';
@@ -385,6 +386,9 @@ export const AppRouter: React.FC = () => {
       />
 
       {/* Fallback */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/driver/login" element={<DriverLogin />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

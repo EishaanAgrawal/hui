@@ -9,10 +9,19 @@ export const getLogisticsJobs = async (req: AuthRequest, res: Response): Promise
     // Only admins or specific roles should access this ideally, but for now we check auth
     if (!req.user) return sendError(res, 'Unauthorized', 401);
 
+    let whereClause = {};
+
+    if (req.user.role === 'DRIVER') {
+      const driver = await prisma.driver.findUnique({ where: { userId: req.user.id } });
+      if (!driver) return sendError(res, 'Driver profile not found', 404);
+      whereClause = { driverId: driver.id };
+    }
+
     const jobs = await prisma.logisticsJob.findMany({
+      where: whereClause,
       include: {
         order: {
-          include: { items: true, customer: true }
+          include: { items: { include: { product: true } }, customer: true }
         },
         vehicle: true,
         driver: { include: { user: true } },

@@ -691,12 +691,77 @@ async function main() {
     ],
   });
 
+  // 12. Create Vehicles and Drivers
+  const driverPassword = await bcrypt.hash('Rider@123', 10);
+  
+  const vehicle1 = await prisma.vehicle.create({
+    data: {
+      registrationNumber: 'MH-15-AB-1234',
+      type: 'MINI_TRUCK',
+      maxWeightCapacity: 1000,
+      maxVolumeCapacity: 500,
+      status: 'AVAILABLE'
+    }
+  });
+
+  const vehicle2 = await prisma.vehicle.create({
+    data: {
+      registrationNumber: 'MH-15-XY-9876',
+      type: 'VAN',
+      maxWeightCapacity: 500,
+      maxVolumeCapacity: 300,
+      status: 'AVAILABLE'
+    }
+  });
+
+  const driverUser1 = await prisma.user.create({
+    data: {
+      name: 'Ramesh Delivery',
+      email: 'rider1@farmdirect.com',
+      passwordHash: driverPassword,
+      role: 'DRIVER',
+      phone: '+91 90000 11111',
+      isVerified: true,
+    }
+  });
+
+  await prisma.driver.create({
+    data: {
+      userId: driverUser1.id,
+      assignedVehicleId: vehicle1.id,
+      isVerified: true,
+      status: 'AVAILABLE'
+    }
+  });
+
+  const driverUser2 = await prisma.user.create({
+    data: {
+      name: 'Suresh Express',
+      email: 'rider2@farmdirect.com',
+      passwordHash: driverPassword,
+      role: 'DRIVER',
+      phone: '+91 90000 22222',
+      isVerified: true,
+    }
+  });
+
+  await prisma.driver.create({
+    data: {
+      userId: driverUser2.id,
+      assignedVehicleId: vehicle2.id,
+      isVerified: true,
+      status: 'AVAILABLE'
+    }
+  });
+  console.log('✅ Riders created:', driverUser1.email, driverUser2.email);
+
   console.log('✅ Seed finished successfully!');
   console.log('------------------------------------------------');
   console.log('🌟 Demo Credentials:');
   console.log('👑 Admin:    admin@farmdirect.com / Admin@123');
   console.log('🚜 Farmer:   farmer1@farmdirect.com / Farmer@123');
   console.log('🛒 Consumer: consumer1@farmdirect.com / User@123');
+  console.log('🚚 Rider:    rider1@farmdirect.com / Rider@123');
   console.log('------------------------------------------------');
 }
 

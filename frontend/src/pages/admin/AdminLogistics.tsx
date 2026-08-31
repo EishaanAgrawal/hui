@@ -11,6 +11,7 @@ export const AdminLogistics: React.FC = () => {
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'JOBS' | 'DRIVERS'>('JOBS');
+  const [assigningJobId, setAssigningJobId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,6 +38,17 @@ export const AdminLogistics: React.FC = () => {
       alert('Driver verified successfully');
     } catch (e: any) {
       alert('Failed to verify driver');
+    }
+  };
+
+  const handleAssignDriver = async (jobId: string, driverId: string, vehicleId: string) => {
+    try {
+      await api.put(`/logistics/jobs/${jobId}/assign`, { driverId, vehicleId });
+      setJobs(jobs.map(j => j.id === jobId ? { ...j, status: 'PICKUP_SCHEDULED', driverId, vehicleId } : j));
+      setAssigningJobId(null);
+      alert('Rider successfully assigned to job!');
+    } catch (e: any) {
+      alert('Failed to assign driver');
     }
   };
 
@@ -160,11 +172,28 @@ export const AdminLogistics: React.FC = () => {
                           <td className="px-6 py-4 font-medium text-slate-700 max-w-[200px] truncate" title={job.deliveryLocation}>
                               {job.deliveryLocation}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 text-right">
                               {job.status === 'AWAITING_LOGISTICS' ? (
-                                  <Button size="sm" variant="primary">Assign Driver</Button>
+                                  assigningJobId === job.id ? (
+                                    <select 
+                                      className="text-xs p-2 border rounded-md"
+                                      onChange={(e) => {
+                                        if (e.target.value) {
+                                          const dr = drivers.find(d => d.id === e.target.value);
+                                          if (dr) handleAssignDriver(job.id, dr.id, dr.assignedVehicleId);
+                                        }
+                                      }}
+                                    >
+                                      <option value="">Select Rider...</option>
+                                      {drivers.filter(d => d.isVerified && d.status === 'AVAILABLE').map(d => (
+                                        <option key={d.id} value={d.id}>{d.user?.name} (Loc: Base)</option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <Button size="sm" variant="primary" onClick={() => setAssigningJobId(job.id)}>Assign Rider</Button>
+                                  )
                               ) : (
-                                  <Button size="sm" variant="outline">View Route</Button>
+                                  <Button size="sm" variant="outline" icon={<ArrowRight className="w-4 h-4" />}>Track Route</Button>
                               )}
                           </td>
                       </tr>
